@@ -26,8 +26,8 @@ int main(void) {
 
     /* Test 1: Default allowlisted targets */
     TEST_ASSERT(safety_guard_validate_target("127.0.0.1", 9877) == 0, "127.0.0.1:9877 must be allowed");
-    TEST_ASSERT(safety_guard_validate_target("10.58.4.191", 9879) == 0, "10.58.4.191:9879 must be allowed");
-    TEST_ASSERT(safety_guard_validate_target("100.113.83.56", 9877) == 0, "100.113.83.56:9877 must be allowed");
+    TEST_ASSERT(safety_guard_validate_target("::1", 9877) == 0, "::1:9877 must be allowed");
+    TEST_ASSERT(safety_guard_validate_target("0.0.0.0", 9877) == 0, "0.0.0.0:9877 must be allowed");
 
     /* Test 2: Unauthorized target rejection */
     TEST_ASSERT(safety_guard_validate_target("8.8.8.8", 9877) != 0, "External target 8.8.8.8 must be rejected");
@@ -37,10 +37,8 @@ int main(void) {
     char iface[64];
     TEST_ASSERT(safety_guard_validate_route("127.0.0.1", iface, sizeof(iface)) == 0 && strcmp(iface, "lo") == 0,
                 "Loopback IP maps to lo");
-    TEST_ASSERT(safety_guard_validate_route("100.113.83.56", iface, sizeof(iface)) == 0 && strcmp(iface, "tailscale0") == 0,
-                "Tailscale IP maps to tailscale0");
-    TEST_ASSERT(safety_guard_validate_route("10.58.4.191", iface, sizeof(iface)) == 0 && strcmp(iface, "wlp2s0") == 0,
-                "LAN IP maps to wlp2s0");
+    TEST_ASSERT(safety_guard_validate_route("::1", iface, sizeof(iface)) == 0 && strcmp(iface, "lo") == 0,
+                "IPv6 Loopback IP maps to lo");
 
     /* Test 4: Dynamic allowlist extension */
     TEST_ASSERT(safety_guard_add_allowed_target("192.168.10.50", 9877) == 0, "Adding custom target succeeds");

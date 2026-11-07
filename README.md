@@ -1,780 +1,492 @@
-# NEXQOR — Multi-Suite Cryptographic Communication Framework
+# QSEAL — Quantum-Secure Enterprise Access & Link
 
-[![Build & Test Status](https://img.shields.io/badge/Build%20%26%20Test-Passing%20(All%20Suites)-success.svg)](#build-testing-and-validation)
-[![Cryptographic Suites](https://img.shields.io/badge/Suites-Classical%20%7C%20Hybrid%20%7C%20PQC-blue.svg)](#cryptographic-specification-comparison)
-[![Hardware Acceleration](https://img.shields.io/badge/Hardware-AVX2%20%7C%20ARM%20NEON%20%7C%20io__uring-orange.svg)](#hardware-acceleration--platform-support)
-[![Formal Verification](https://img.shields.io/badge/Verification-ProVerif%202.05%20Verified-blueviolet.svg)](#formal-security-verification)
+[![Platform](https://img.shields.io/badge/Platform-Linux%20x86__64%20%7C%20ARM64%20%7C%20ARM32-blue.svg)](#supported-architectures--hardware-hierarchy)
+[![Cryptographic Profiles](https://img.shields.io/badge/Profiles-Hybrid%20%7C%20Pure%20PQC-success.svg)](#cryptographic-profiles--specifications)
+[![FIPS Standards](https://img.shields.io/badge/Standards-NIST%20FIPS%20203%20%7C%20FIPS%20204-purple.svg)](#pure-post-quantum-profile-fips-203204)
+[![Direct WAN](https://img.shields.io/badge/Transport-Native%20Direct%20UDP-orange.svg)](#global-public-ip-direct-connectivity)
+[![Debian Packages](https://img.shields.io/badge/Packaging-Debian%20%28.deb%29-red.svg)](#debian-packaging--systemd-services)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**NEXQOR** is an ultra-high-performance, modular secure network protocol and cryptographic communication framework engineered for Linux x86-64 servers and embedded ARM IoT platforms (such as Raspberry Pi 4 and 5). 
+**QSEAL (Quantum-Secure Enterprise Access & Link)** is an independent, production-grade secure communication and networking platform designed for high-assurance public Internet, enterprise access, and edge IoT connectivity. 
 
-The repository provides three completely **independent, self-contained, and production-grade implementations**:
-1. **Classical IoT Suite (`classical/`)**: Optimized for resource-constrained IoT microcontrollers and legacy environments using RFC 7748 X25519, RFC 8032 Ed25519, and AES-128-CCM.
-2. **Hybrid Post-Quantum Suite (`hybrid/`)**: Dual-combiner defense-in-depth architecture combining classical and post-quantum primitives (X25519 + ML-KEM-768 and Ed25519 + ML-DSA-65) to protect against *Harvest Now, Decrypt Later* attacks while maintaining classical compliance.
-3. **Pure Post-Quantum Suite (`pqc/`)**: High-security, SIMD-accelerated FIPS 203 (ML-KEM-768) and FIPS 204 (ML-DSA-65) implementation with ChaCha20-Poly1305 session encryption.
-
-Each implementation is decoupled with its own build systems, cryptographic state machine, automated regression tests, multi-client event-loop server, and N-run benchmarking engine with dynamic hardware thermal and memory monitoring.
-
----
-
-## 🚀 Architecture, Device Roles & Pre-Built Releases
-
-NEXQOR is engineered for a **heterogeneous computing hierarchy**, with explicit device roles:
-- **x86-64 Computers (Intel/AMD Laptops, PCs, Linux/Kali VMs, Cloud Servers)**: Can operate as the **Central Server** (with the GTK4 Cyber NOC Dashboard or headless daemon) OR as an **Interactive Client**.
-- **ARM Edge Devices (Raspberry Pi 4/5, Raspberry Pi 2/3, Jetson)**: Operate as **Clients Only**, establishing quantum-resilient sessions and streaming encrypted telemetry.
-- **ESP32 Microcontrollers (Xtensa 32-bit)**: Operate as **Clients Only**, executing lightweight NIST FIPS 203 ML-KEM-768 encapsulation and streaming encrypted sensor telemetry.
-
----
-
-### 📦 Pre-Built Debian Packages & Download Links
-
-| Target Architecture | Device Role | Target Devices | Package File | Direct Download Command | Local Install Command |
-| :--- | :---: | :--- | :---: | :---: | :--- |
-| **x86-64 / AMD64 (`x86`)** | **Server OR Client** | Intel/AMD PCs, Laptops, Kali Linux VMs | `nexqor-x86.deb` | `curl -L -o nexqor-x86.deb "https://drive.usercontent.google.com/download?id=1snKZ6yydaG8iU7GVZsoXroI6nH1V4cuL&export=download&confirm=t"` | `sudo dpkg -i nexqor-x86.deb` |
-| **ARM64 / AArch64 (`arm64`)** | **Client Only** | Raspberry Pi 4, Raspberry Pi 5, Jetson | `nexqor-arm64.deb` | `curl -L -o nexqor-arm64.deb "https://drive.usercontent.google.com/download?id=1N2FIVfjSGicVt-Zh1U25ApDIXfzMtMY3&export=download&confirm=t"` | `sudo dpkg -i nexqor-arm64.deb` |
-| **ARM32 / ARMv7 (`arm32`)** | **Client Only** | Raspberry Pi 2, Raspberry Pi 3 (32-bit OS) | `nexqor-arm32.deb` | `curl -L -o nexqor-arm32.deb "https://drive.usercontent.google.com/download?id=1rVeuwjDr8Sl_SfswEx12wvug2IG3f-ap&export=download&confirm=t"` | `sudo dpkg -i nexqor-arm32.deb` |
-| **ESP32 (Xtensa)** | **Client Only** | ESP32 DevKit, NodeMCU-32S, ESP32-WROOM | `esp32_secure_node.ino` | *Flash via Arduino IDE from `esp32/`* | *See [ESP32 Setup Guide](esp32/README.md)* |
-
----
-
-### 🛠️ Step-by-Step Setup Guides for All Device Types
-
-#### 1. Device Tier 1: x86-64 Laptop / PC / Cloud Server (SERVER or CLIENT)
-
-An x86-64 machine can act as the **Central Server Relay** or as an **Interactive Client**:
-
-```bash
-# Step 1: Download package:
-curl -L -o nexqor-x86.deb "https://drive.usercontent.google.com/download?id=1snKZ6yydaG8iU7GVZsoXroI6nH1V4cuL&export=download&confirm=t"
-
-# Step 2: Install package:
-sudo dpkg -i nexqor-x86.deb || sudo apt-get install -f -y
-
-# Step 3: Run Setup Wizard once:
-nexqor setup
-```
-
-- **If setting up as SERVER**:
-  1. Select **Role**: `1) Server`
-  2. Select **Crypto Mode**: `4) Adaptive` (or `3) PQC`)
-  3. Bind Address: `0.0.0.0` | Port: `9877`
-  4. Launch the server via CLI or GTK4 Cyber NOC Dashboard:
-     ```bash
-     # Option A: GTK4 Pure C Cyber NOC Dashboard (Recommended):
-     ./run_ui.sh
-     # Click '▶ Start Server' on the top bar!
-
-     # Option B: Headless background server:
-     nexqor server start
-     ```
-  5. The server/dashboard automatically detects and displays your active IP addresses (e.g., Wi-Fi: `10.58.4.191:9877`, Tailscale: `100.113.83.56:9877`).
-
-- **If setting up as CLIENT** (e.g. second laptop, Kali VM, or another terminal):
-  1. Select **Role**: `2) Client`
-  2. Target Server IP: Enter Server Wi-Fi IP (e.g. `10.58.4.191`) or Tailscale IP (`100.113.83.56`)
-  3. Target Port: `9877`
-  4. Connect in real-time interactive chat:
-     ```bash
-     nexqor client connect
-     ```
-
----
-
-#### 2. Device Tier 2: Raspberry Pi 4 / 5 (ARM64 — CLIENT ONLY)
-
-Raspberry Pi 4 and 5 run the ARM64 NEON-vectorized client:
-
-```bash
-# Step 1: Navigate to workspace:
-cd ~/Desktop/Nexqor
-
-# Step 2: Download genuine ARM64 package:
-curl -L -o nexqor-arm64.deb "https://drive.usercontent.google.com/download?id=1N2FIVfjSGicVt-Zh1U25ApDIXfzMtMY3&export=download&confirm=t"
-
-# Step 3: Install package:
-sudo dpkg -i nexqor-arm64.deb || sudo apt-get install -f -y
-
-# Step 4: Run initial setup (select Role 2: Client):
-nexqor setup
-```
-- In `nexqor setup`:
-  - **Role**: Select `2) Client`
-  - **Server IP**: Enter Server Wi-Fi IP (e.g. `10.58.4.191`) or Tailscale IP (`100.113.83.56`)
-  - **Port**: Press `[Enter]` (default `9877`)
-
-```bash
-# Step 5: Connect to the Server:
-nexqor client connect
-
-# Or send automated non-interactive telemetry message:
-nexqor client connect --msg "Raspberry Pi 4 online with ML-KEM-768!"
-```
-
----
-
-#### 3. Device Tier 3: Raspberry Pi 2 / 3 (ARM32 — CLIENT ONLY)
-
-For Raspberry Pi 2, 3, or any single-board computer running 32-bit ARM Linux (`armhf`):
-
-```bash
-cd ~/Desktop/Nexqor
-
-# Step 1: Download ARM32 package:
-curl -L -o nexqor-arm32.deb "https://drive.usercontent.google.com/download?id=1rVeuwjDr8Sl_SfswEx12wvug2IG3f-ap&export=download&confirm=t"
-
-# Step 2: Install package:
-sudo dpkg -i nexqor-arm32.deb || sudo apt-get install -f -y
-
-# Step 3: Configure as Client:
-nexqor setup   # Select Role: 2 Client, Target Server IP: 10.58.4.191
-
-# Step 4: Connect:
-nexqor client connect
-```
-
----
-
-#### 4. Device Tier 4: ESP32 Microcontroller (CLIENT ONLY)
-
-The ESP32 runs lightweight pure post-quantum lattice key encapsulation (NIST FIPS 203 ML-KEM-768) and ChaCha20-Poly1305 symmetric AEAD, connecting directly to the x86 Server over UDP:
-
-1. Open Arduino IDE and install ESP32 Board Support:
-   ```text
-   https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-   ```
-2. Open `esp32/esp32_secure_node/esp32_secure_node.ino`.
-3. Configure your Wi-Fi credentials and the Server's dynamic Wi-Fi IP (shown in the GTK4 Server Dashboard header):
-   ```cpp
-   const char* WIFI_SSID     = "Your_WiFi_Name";
-   const char* WIFI_PASSWORD = "Your_WiFi_Password";
-   const char* SERVER_IP     = "10.58.4.191";  // Dynamic Server IP shown on Dashboard
-   const uint16_t SERVER_PORT= 9877;
-   ```
-4. Select Board **`ESP32 Dev Module`**, choose your serial port (`/dev/ttyUSB0`), and click **Upload**.
-5. Open Serial Monitor at **115200 baud**:
-   - The ESP32 connects to Wi-Fi, initiates the quantum-safe handshake with the Server, and streams encrypted sensor telemetry every 2 seconds.
-   - **Actuation Demo**: Type `LED_ON` or `LED_OFF` in the GTK4 Server Dashboard chat bar to toggle the ESP32's onboard blue LED (GPIO 2) in real time!
-   - Full details in [esp32/README.md](esp32/README.md).
-
----
-
-### 🌐 Real-Time Chat & Dashboard Synchronization
-
-- **Server Dashboard (`./run_ui.sh`)**: Displays `CONNECTED CLIENTS (ACTIVE)` with Client ID, remote IP, UDP port, session ID, and handshake setup latency (typically 1.6–2.1 ms).
-- **Inactivity Watchdog**: If a client goes silent for >10 seconds or issues a graceful disconnect (`PKT_DISCONNECT`), it immediately transitions to `DISCONNECTED SESSIONS (RECENT)`.
-- **Dynamic Endpoint Auto-Refresh**: If your Wi-Fi IP changes, the dashboard top bar and connection instructions refresh automatically within 1 second.
-- **Strict Key Security**: Cryptographic identity keys are generated in `~/.config/securecomm/` with strict `0600` permissions.
-
-> For deep architectural specifications, configuration schemas, and operational instructions, see [securecomm/README.md](securecomm/README.md).
+QSEAL operates **completely autonomously without dependencies on Tailscale, third-party VPN software, external coordination servers, or mandatory cloud relays**. It establishes, authenticates, encrypts, monitors, and terminates direct UDP sessions over the public Internet using NIST standardized post-quantum and hybrid cryptography.
 
 ---
 
 ## Table of Contents
 
-- [Project Architecture & Organization](#project-architecture--organization)
-- [Cryptographic Specification Comparison](#cryptographic-specification-comparison)
-- [Performance & Hardware Monitoring Engine](#performance--hardware-monitoring-engine)
-- [Shared Dependencies](#shared-dependencies)
-- [Build Instructions](#build-instructions)
-  - [Global Makefile Dispatcher](#global-makefile-dispatcher)
-  - [Individual Suite Compilation](#individual-suite-compilation)
-  - [Cross-Compilation for ARM64 & ARM32](#cross-compilation-for-arm64--arm32)
-- [Execution & Operation](#execution--operation)
-  - [Multi-Client Server Deployment](#multi-client-server-deployment)
-  - [Interactive Client & Telemetry Broadcaster](#interactive-client--telemetry-broadcaster)
-- [Benchmarking & Empirical Evaluation](#benchmarking--empirical-evaluation)
-  - [Microbenchmark Engine (N Runs)](#microbenchmark-engine-n-runs)
-  - [Concurrent Multi-Client Handshake Benchmark](#concurrent-multi-client-handshake-benchmark)
-- [Formal Security Verification](#formal-security-verification)
-- [Repository Maintenance & Hygiene](#repository-maintenance--hygiene)
+- [Core Platform Capabilities](#core-platform-capabilities)
+- [Cryptographic Profiles & Specifications](#cryptographic-profiles--specifications)
+  - [Profile A: Hybrid Mode (Dual Classical + Post-Quantum)](#profile-a-hybrid-mode-dual-classical--post-quantum)
+  - [Profile B: Pure Post-Quantum Mode (NIST FIPS 203/204)](#profile-b-pure-post-quantum-mode-nist-fips-203204)
+  - [Authenticated Profile Negotiation & Downgrade Protection](#authenticated-profile-negotiation--downgrade-protection)
+- [Global Public-IP Direct Connectivity](#global-public-ip-direct-connectivity)
+  - [Bind Address vs Advertised Public Endpoint](#bind-address-vs-advertised-public-endpoint)
+  - [NAT Traversal, Port Forwarding, and CGNAT Diagnostics](#nat-traversal-port-forwarding-and-cgnat-diagnostics)
+- [Platform Architecture & Multi-Client Engine](#platform-architecture--multi-client-engine)
+  - [Independent Server Implementation](#independent-server-implementation)
+  - [Independent Client Implementation](#independent-client-implementation)
+  - [Client-to-Client Routed Messaging](#client-to-client-routed-messaging)
+  - [Memory Zeroization & Sliding Replay Window](#memory-zeroization--sliding-replay-window)
+- [Quick Start & Setup Guide](#quick-start--setup-guide)
+  - [Interactive Onboarding Wizard](#interactive-onboarding-wizard)
+  - [Scripted & Non-Interactive Unattended Provisioning](#scripted--non-interactive-unattended-provisioning)
+  - [Starting the Headless Server](#starting-the-headless-server)
+  - [Connecting the Independent Client](#connecting-the-independent-client)
+- [CLI Reference](#cli-reference)
+- [Configuration Specification & Schemas](#configuration-specification--schemas)
+- [Debian Packaging & Systemd Services](#debian-packaging--systemd-services)
+- [Empirical Performance & Microbenchmark Results](#empirical-performance--microbenchmark-results)
+- [Automated Verification & Test Suites](#automated-verification--test-suites)
+- [Optional GTK 4 Security Lab Console](#optional-gtk-4-security-lab-console)
+- [Repository Organization & Hygiene](#repository-organization--hygiene)
 
 ---
 
-## Project Architecture & Organization
+## Core Platform Capabilities
 
-The repository strictly enforces modular separation. Shared external dependencies (`liboqs`, `liburing_local`) are maintained at the root without redundant in-tree copies:
-
-```
-NEXQOR/
-├── Makefile                     # Global dispatcher (build, test, clean, UI targets)
-├── README.md                    # Global architectural & operational documentation
-├── app.sh                       # Unified single-command launcher for both GTK 4 UIs
-├── run_ui.sh                    # Launcher for Server NOC & Telemetry Console
-├── run_attack_ui.sh             # Launcher for Security & Attack Lab UI
-├── .gitignore                   # Universal exclusion rule-set (binaries, objects, keys, logs)
-├── LICENSE                      # MIT Open Source License
-├── liboqs/                      # Shared Open Quantum Safe library (git submodule)
-├── liburing_local/              # Shared Linux io_uring kernel headers
-│
-├── ui/                          # GTK 4 Cryptographic Server NOC & Session Inspector
-│   ├── ui_app.c / ui_app.h      # Graphical server dashboard and client session registry
-│   ├── ipc_manager.c / .h       # UNIX domain socket IPC listener and client telemetry
-│   ├── style.css                # Cyber-Dark theme for Server NOC Console
-│   └── Makefile                 # Native GTK 4 build system
-│
-├── security_lab/                # Pure-C Real-Network Security Evaluation & Threat Lab
-│   ├── security_lab             # Main CLI security evaluation engine binary
-│   ├── Makefile                 # Modular build system (engine, tests, ui)
-│   ├── ui/                      # GTK 4 Security & Attack Lab Interface (attack_ui)
-│   │   ├── attack_ui.c / .h     # Graphical threat vector & evaluation controller
-│   │   ├── style.css            # Dark cyber theme with status badges
-│   │   └── Makefile             # Pure-C GTK 4 attack UI build system
-│   ├── attacks/                 # 15 attack & impairment implementations (loss, replay, fuzzing, etc.)
-│   ├── src/                     # Test orchestration, safety guard allowlists, suite adapters
-│   ├── monitoring/              # Packet observer, health probes, resource and recovery monitors
-│   ├── reporting/               # Comparison reports (report.md, metrics.csv, JSON audits)
-│   ├── tests/                   # Automated safety, bounds parsing, and metric unit tests
-│   └── results/                 # Timestamped run directories and latest symlink
-│
-├── classical/                   # 100% Independent Classical IoT Suite
-│   ├── crypto/                  # AES-128-CCM AEAD, sliding replay window, trust store
-│   ├── wrappers/                # X25519, Ed25519, SHA-256, HKDF-SHA-256, HMAC-SHA-256
-│   ├── tests/                   # 22-test automated regression & security test suite
-│   ├── verification/            # ProVerif 2.05 formal verification protocol model
-│   ├── perf_monitor.h           # Thermal, memory, CPU, and statistical metrics engine
-│   ├── server.c                 # High-throughput Linux io_uring UDP server (port 9877)
-│   ├── client.c                 # Interactive mutual-auth terminal client
-│   ├── client_broadcast.c       # Autonomous IoT telemetry sensor broadcaster
-│   ├── bench_crypto.c           # Cryptographic microbenchmark suite (N runs)
-│   ├── bench_nclient.c          # Multi-client concurrent handshake benchmark
-│   ├── Makefile                 # Native x86_64 build system
-│   ├── Makefile.arm64           # ARM64 (Raspberry Pi 4/5) build system
-│   └── Makefile.arm32           # ARMv7-A 32-bit build system
-│
-├── hybrid/                      # 100% Independent Hybrid Post-Quantum Suite
-│   ├── include/                 # Hybrid KEX, Dual-Signature, and KDF definitions
-│   ├── src/                     # Hybrid combiners, error handling, session state
-│   ├── crypto/                  # ChaCha20-Poly1305 AEAD, replay window, trust store
-│   ├── wrappers/                # ML-KEM and ML-DSA wrapper bindings
-│   ├── tests/                   # 7 automated regression test suites
-│   ├── perf_monitor.h           # Thermal, memory, CPU, and statistical metrics engine
-│   ├── server.c                 # High-throughput Linux UDP event loop server (port 9879)
-│   ├── client.c                 # Hybrid interactive mutual-auth terminal client
-│   ├── client_broadcast.c       # Autonomous hybrid telemetry broadcaster
-│   ├── bench_crypto.c           # Hybrid microbenchmark suite (N runs)
-│   ├── bench_nclient.c          # Multi-client concurrent handshake benchmark
-│   ├── Makefile                 # Native x86_64 build system
-│   ├── Makefile.arm64           # ARM64 build system
-│   └── Makefile.arm32           # ARM32 build system
-│
-└── pqc/                         # 100% Independent Pure Post-Quantum Suite
-    ├── crypto/                  # ChaCha20-Poly1305 AEAD, replay window, trust store
-    ├── wrappers/                # ML-KEM-768, ML-DSA-65, SHAKE256 wrappers
-    ├── tests/                   # 8 automated security and KAT test suites
-    ├── verification/            # ProVerif 2.05 formal model for pure PQC
-    ├── perf_monitor.h           # Thermal, memory, CPU, and statistical metrics engine
-    ├── server.c                 # High-throughput Linux io_uring UDP server (port 9877)
-    ├── client.c                 # PQC interactive mutual-auth terminal client
-    ├── client_broadcast.c       # Autonomous PQC telemetry broadcaster
-    ├── bench_pqc.c              # Pure PQC microbenchmark suite (N runs)
-    ├── bench_nclient.c          # Multi-client concurrent handshake benchmark
-    ├── Makefile                 # Native x86_64 build system
-    ├── Makefile.arm64           # ARM64 build system
-    └── Makefile.arm32           # ARM32 build system
-```
+- **100% Independent Networking**: Operates directly over raw POSIX UDP sockets on the public Internet. No Tailscale, WireGuard, OpenVPN, or centralized relays.
+- **Strict Post-Quantum Cryptography**: Compliant with NIST FIPS 203 (ML-KEM-768) and NIST FIPS 204 (ML-DSA-65).
+- **Hybrid Quantum-Safe Mode**: Combines classical X25519 ECDH and ML-KEM-768 key encapsulation via HKDF-SHA-384, providing dual-layer defense-in-depth against *Harvest Now, Decrypt Later* attacks.
+- **Mutual Authentication**: Full mutual cryptographic authentication of server and client identities prior to session activation.
+- **Direct WAN / Public IP Support**: Explicit separation of local bind address (`0.0.0.0`) and globally routable advertised public endpoint (`public_ip:port` or `fqdn:port`).
+- **Concurrent Multi-Client Server**: Headless Linux daemon managing up to 64 concurrent client tunnels with individual replay windows, session timeouts, and heartbeats.
+- **Client-to-Client Routed Communication**: Server-routed peer-to-peer messaging (`to:<target>:<msg>`) allowing authenticated clients to communicate through the server.
+- **Automated Diagnostics**: Real-time network interface classification (Loopback, LAN, Private NAT RFC 1918, CGNAT RFC 6598, and Public Direct IP) with port binding tests.
+- **Production Debian Packaging**: Generates standalone `.deb` packages for AMD64, ARM64, and ARM32 with strict `0700` and `0600` key permissions and Systemd units.
+- **Zero Insecure Fallbacks**: No mock cryptographic loops, dummy signatures, or XOR decryptors. Insecure code has been completely removed.
 
 ---
 
-## Cryptographic Specification Comparison
+## Cryptographic Profiles & Specifications
 
-| Property | Classical IoT (`classical/`) | Hybrid Suite (`hybrid/`) | Pure PQC (`pqc/`) |
-| :--- | :--- | :--- | :--- |
-| **Suite Identifier** | `QRYPTONEX-CLASSICAL-X25519-ED25519-AES128CCM` | `QRYPTONEX-HYBRID-X25519-MLKEM768-ED25519-MLDSA65` | `NEXQOR-PQC-MLKEM768-MLDSA65-CHACHA20` |
-| **Key Exchange (KEX)** | X25519 (ECDH, RFC 7748) | X25519 + ML-KEM-768 (Dual Combiner) | ML-KEM-768 (NIST FIPS 203) |
-| **Digital Signatures** | Ed25519 (RFC 8032) | Ed25519 + ML-DSA-65 (Dual Signature) | ML-DSA-65 (NIST FIPS 204) |
-| **Session Encryption** | AES-128-CCM (15B AAD, 16B Tag) | ChaCha20-Poly1305 (RFC 8439) | ChaCha20-Poly1305 (RFC 8439) |
-| **Key Derivation (KDF)** | HKDF-SHA-256 (RFC 5869) | HKDF-SHA-384 (RFC 5869) | SHAKE-256 (NIST FIPS 202) |
-| **Transcript Hashing** | SHA-256 (FIPS 180-4) | SHA-384 (FIPS 180-4) | SHAKE-256 (FIPS 202) |
-| **Replay Protection** | RFC 6479 64-Packet Sliding Window | RFC 6479 64-Packet Sliding Window | RFC 6479 64-Packet Sliding Window |
-| **Public Key Size** | 32 B (KEX) + 32 B (Sig) = **64 B** | 1,216 B (KEX) + 1,984 B (Sig) = **3,200 B** | 1,184 B (KEM) + 1,952 B (DSA) = **3,136 B** |
-| **Secret Key Size** | 32 B (KEX) + 32 B (Sig) = **64 B** | 2,432 B (KEX) + 4,064 B (Sig) = **6,496 B** | 2,400 B (KEM) + 4,032 B (DSA) = **6,432 B** |
-| **Ciphertext Size** | 32 B (Ephemeral PK) | 1,120 B (X25519 + ML-KEM CT) | 1,088 B (ML-KEM-768 CT) |
-| **Signature Size** | **64 Bytes** | **3,380 Bytes** (64B + 3,309B + Frame) | **3,309 Bytes** |
-| **Shared Secret Size**| **32 Bytes** | **64 Bytes** (Concatenated IKM) | **32 Bytes** |
-| **Handshake Wire Size**| **464 Bytes** (Total 4 packets) | **15,280 Bytes** (Dual-auth 4-way) | **11,828 Bytes** (Dual-auth 4-way) |
-| **Quantum Resistance**| Vulnerable to Shor's Algorithm | Quantum-Proof + Classical Compliant | Quantum-Proof (NIST Level 3 / 192-bit) |
+QSEAL enforces exactly two primary cryptographic operational profiles:
 
----
-
-## Performance & Hardware Monitoring Engine
-
-All three implementations integrate a unified, zero-overhead hardware and process telemetry engine (`perf_monitor.h`). **Measured metrics are obtained dynamically from the Linux kernel and hardware sensors with zero hardcoding or simulated data:**
-
-### 1. Dynamic Hardware Temperature Monitoring
-- Continuously probes kernel sysfs sensor interfaces:
-  - `/sys/class/thermal/thermal_zone0/temp` through `thermal_zone4/temp`
-  - `/sys/class/hwmon/hwmon*/temp*_input`
-- Reports:
-  - Initial System Temperature (°C)
-  - Average System Temperature (°C)
-  - Minimum & Maximum System Temperature (°C)
-  - Final System Temperature (°C)
-  - Temperature Delta during execution (°C)
-- If sensors are unavailable (e.g. non-privileged container or virtual machine), the system explicitly reports `Unavailable (No sysfs thermal sensor)` without fabricating measurements.
-
-### 2. Comprehensive Memory Metrics
-- **Initial, Average, Peak, and Final RAM (MB)**: Obtained via `/proc/self/statm` and `getrusage(RUSAGE_SELF, &ru)`.
-- **RAM Increase (MB)**: Delta between final and initial resident set size.
-- **Heap Memory (MB)**: Exact dynamic heap allocations measured via glibc `mallinfo2()`.
-- **Stack Memory (KB)**: Measured kernel stack allocation via `/proc/self/status` `VmStk`.
-- **Leak Detection**: Verifies zero memory leakage and clean buffer zeroization (`explicit_bzero`).
-
-### 3. CPU Utilization & Cycle Metrics
-- **Process CPU Time (ms)**: Nanosecond-accurate execution time via `clock_gettime(CLOCK_PROCESS_CPUTIME_ID)`.
-- **Average & Peak CPU Utilization (%)**: Computed dynamically against wall clock time.
-- **CPU Cycles per Operation**: Direct hardware counter via `__rdtsc` on x86-64 and `CNTVCT_EL0` on ARM64.
-
-### 4. Statistical Distribution Across N Runs
-- Benchmark runs execute across configurable $N$ runs (default 5).
-- Per-run progress is logged in real time with individual run metrics.
-- Complete statistical distribution calculated over all completed runs:
-  - **Mean, Minimum, Maximum, Median, Standard Deviation, Variance, P95 Latency, and Throughput (ops/sec)**.
-
----
-
-## Shared Dependencies
-
-The framework relies on standard Linux system libraries:
-- **GCC / Clang**: C11 compliant compiler.
-- **OpenSSL 3.x (`libssl-dev`, `libcrypto`)**: AES-128-CCM, ChaCha20-Poly1305, X25519, Ed25519, SHA-256, SHA-384, HKDF.
-- **liboqs (Open Quantum Safe)**: Used by `pqc/` and `hybrid/` for ML-KEM-768 and ML-DSA-65.
-- **liburing (`liburing-local/` or system `liburing`)**: Used for the Linux asynchronous event loop.
-
-### Building `liboqs` (One-Time Setup)
-```bash
-# From repository root:
-cmake -S liboqs -B liboqs/build \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DOQS_BUILD_ONLY_LIB=ON \
-      -DOQS_ENABLE_KEM_ml_kem_768=ON \
-      -DOQS_ENABLE_SIG_ml_dsa_65=ON \
-      -DOQS_USE_AVX2_INSTRUCTIONS=ON \
-      -DBUILD_SHARED_LIBS=OFF
-
-cmake --build liboqs/build -j$(nproc)
-```
-
----
-
-## Build Instructions
-
-### Global Makefile with Hardware Architecture Detection
-
-The root [Makefile](file:///home/vishal-kumar/Desktop/Events/QHack/Makefile) automatically detects the host device CPU architecture (`uname -m`) and dispatches the build to the appropriate sub-Makefiles across **Classical**, **Hybrid**, and **Pure PQC**:
-
-| Host Device / CPU | Detected Platform | Automatically Dispatched Makefiles |
+| Specification Parameter | Profile A: Hybrid Mode | Profile B: Pure PQC Mode |
 | :--- | :--- | :--- |
-| **x86_64 / amd64** (Linux Server, Desktop, Laptop) | `x86_64` | `classical/Makefile`, `hybrid/Makefile`, `pqc/Makefile` |
-| **ARM64 / aarch64** (Raspberry Pi 4, Raspberry Pi 5, 64-bit ARM) | `arm64` | `classical/Makefile.arm64`, `hybrid/Makefile.arm64`, `pqc/Makefile.arm64` |
-| **ARM32 / armv7l / armhf** (Raspberry Pi 2, Raspberry Pi 3 32-bit) | `arm32` | `classical/Makefile.arm32`, `hybrid/Makefile.arm32`, `pqc/Makefile.arm32` |
-
-#### Standard Commands from Project Root
-
-```bash
-# 1. Automatic device detection & build for all 3 suites:
-make
-# or
-make all
-
-# 2. Inspect detected hardware and active Makefile mapping:
-make detect
-
-# 3. Run automated regression & security test suites across all 3 implementations:
-make test
-
-# 4. Clean build artifacts for the active/detected device architecture:
-make clean
-
-# 5. Deep clean across ALL architectures (x86_64, ARM64, ARM32) in all 3 implementations:
-make clean-all
-```
-
-#### Explicit Target Architecture Overrides & Cross-Compilation
-
-You can explicitly build or clean for a specific target architecture on any host machine:
-
-```bash
-# Build all 3 suites for ARM64 (using Makefile.arm64):
-make arm64
-# or: make ARCH=arm64 all
-
-# Build all 3 suites for ARM32 (using Makefile.arm32):
-make arm32
-# or: make ARCH=arm32 all
-
-# Build all 3 suites for x86_64:
-make x86_64
-# or: make ARCH=x86_64 all
-
-# Clean specific architectures across all 3 suites:
-make clean-arm64       # Clean ARM64 binaries and objects
-make clean-arm32       # Clean ARM32 binaries and objects
-make clean-x86_64      # Clean x86_64 binaries and objects
-```
-
-#### Target-Specific Suite Dispatching
-
-```bash
-make classical         # Build classical IoT suite for detected device
-make hybrid            # Build hybrid suite for detected device
-make pqc               # Build PQC suite for detected device
-
-make test-classical    # Run 22-test classical regression suite
-make test-hybrid       # Run 7-suite hybrid regression test
-make test-pqc          # Run 8-test PQC security suite
-```
-
-### Individual Suite Compilation
-
-Each directory can be built independently:
-
-```bash
-# Classical IoT Suite:
-cd classical
-make clean && make all
-make test
-
-# Hybrid Suite:
-cd hybrid
-make clean && make all
-make test
-
-# Pure PQC Suite:
-cd pqc
-make clean && make all
-make test
-```
-
-### Native ARM Compilation on Raspberry Pi 4 / 5
-
-When running directly on ARM hardware (e.g., Raspberry Pi 4, Raspberry Pi 5 running 64-bit Linux), running `make` from the project root automatically selects `Makefile.arm64` across all suites:
-
-```bash
-# Automatically detects aarch64 and builds ARM64 binaries:
-make all
-
-# Run client binaries with automatic symlinks:
-./classical/client 127.0.0.1 9877
-./hybrid/client 127.0.0.1 9879
-./pqc/client 127.0.0.1 9876
-```
+| **Operational Designation** | `hybrid` (Recommended Enterprise Profile) | `pqc` (NIST High-Assurance Profile) |
+| **Classical Key Agreement** | X25519 ECDH (RFC 7748, 32 bytes) | *None (Zero classical dependency)* |
+| **Post-Quantum KEM** | ML-KEM-768 (NIST FIPS 203, Kyber768) | ML-KEM-768 (NIST FIPS 203, Kyber768) |
+| **Public Key Size (KEM)** | 32 B (ECDH) + 1184 B (ML-KEM) = 1216 B | 1184 bytes |
+| **Ciphertext Size (KEM)** | 32 B (ECDH) + 1088 B (ML-KEM) = 1120 B | 1088 bytes |
+| **Digital Signature / Auth** | ML-DSA-65 (NIST FIPS 204) + Ed25519 (RFC 8032) | ML-DSA-65 (NIST FIPS 204, Dilithium3) |
+| **Signature Size** | 64 B (Ed25519) + 3309 B (ML-DSA) = 3373 B | 3309 bytes |
+| **Key Derivation (KDF)** | HKDF-SHA-384 (RFC 5869) Dual Combiner | HKDF-SHA-384 (RFC 5869) Single-Secret KDF |
+| **Symmetric AEAD** | ChaCha20-Poly1305 (RFC 8439, 256-bit key) | ChaCha20-Poly1305 (RFC 8439, 256-bit key) |
+| **Nonce & Tag Size** | 12-byte Nonce, 16-byte Poly1305 Auth Tag | 12-byte Nonce, 16-byte Poly1305 Auth Tag |
+| **Security Level** | Category 3 Post-Quantum (192-bit) + 128-bit Classical | Category 3 Post-Quantum (192-bit Quantum Safe) |
 
 ---
 
-## Execution & Operation
+### Profile A: Hybrid Mode (Dual Classical + Post-Quantum)
 
-### Multi-Client Server Deployment
+Hybrid Mode utilizes a dual-combiner architecture where session security requires breaking **both** the classical ECDH mechanism and the post-quantum lattice problem:
+1. **Key Agreement**: Client and Server generate ephemeral X25519 keypairs ($pk_c, sk_c$) and ML-KEM-768 keypairs ($pk_q, sk_q$).
+2. **Encapsulation**: Ephemeral shared secrets $SS_{classical} \in \{0,1\}^{32}$ and $SS_{pqc} \in \{0,1\}^{32}$ are established independently.
+3. **HKDF Combiner**: The two independent secrets are mixed into a master session secret using HKDF-Extract and HKDF-Expand with SHA-384:
+   $$\text{Combined Secret } SS_{master} = \text{HKDF-Extract}(\text{salt}=\text{transcript}, \, SS_{classical} \mathbin{\Vert} SS_{pqc})$$
+   $$\text{Session Keys } (K_{tx}, K_{rx}) = \text{HKDF-Expand}(SS_{master}, \, \text{"QSEAL-v1-hybrid-keys"}, \, 64)$$
+4. **Authentication**: Handshake transcripts are signed using dual ML-DSA-65 and Ed25519 credentials and pinned against the local trust store.
 
-Each suite provides a dedicated multi-client UDP server utilizing `io_uring` and dedicated worker thread pools:
+---
 
-| Implementation | Default Port | Default Server Identity Key |
+### Profile B: Pure Post-Quantum Mode (NIST FIPS 203/204)
+
+Pure PQC Mode operates strictly using standardized lattice-based post-quantum cryptography:
+1. **Module-Lattice KEM**: ML-KEM-768 parameter set under NIST FIPS 203.
+2. **Module-Lattice DSA**: ML-DSA-65 parameter set under NIST FIPS 204.
+3. **Session AEAD**: ChaCha20-Poly1305 authenticated symmetric encryption under RFC 8439.
+4. **Zero Classical Secrets**: Eliminates elliptic curve vulnerabilities to Shor's algorithm.
+
+---
+
+### Authenticated Profile Negotiation & Downgrade Protection
+
+- During the cryptographic handshake, the client presents its supported profile list in `PKT_CLIENT_HELLO`.
+- The server evaluates the requested profiles against its administrator-configured policy (`server.json`).
+- If no mutual post-quantum profile is permitted, the server terminates the handshake with `SECURECOMM_ERR_POLICY_REJECTED`.
+- **Anti-Downgrade Invariant**: The platform **never silently downgrades** to unauthenticated or classical-only configurations. The negotiated parameters form part of the signed transcript, making MITM downgrade attacks mathematically detectable.
+
+---
+
+## Global Public-IP Direct Connectivity
+
+QSEAL communicates directly across the public Internet via UDP. The default communication topology is:
+
+$$\text{QSEAL Client} \xrightarrow{\quad\text{Public Internet (UDP)}\quad} \text{QSEAL Server}$$
+
+```
++------------------------+                        +------------------------+
+|      QSEAL CLIENT      |                        |      QSEAL SERVER      |
+|                        |                        |                        |
+|  Device: cli-1         |   Public Internet      |  Device: srv-1         |
+|  Identity: 0600 Key    |  ------------------>   |  Identity: 0600 Key    |
+|  Target: 203.0.113.10  |      UDP :9877         |  Bind: 0.0.0.0:9877    |
+|  Mode: Hybrid / PQC    |                        |  Advertised: 203.0.113.10
++------------------------+                        +------------------------+
+```
+
+### Bind Address vs Advertised Public Endpoint
+
+To ensure seamless operation in cloud environments, multi-homed servers, and containerized networks, QSEAL makes an explicit architectural distinction:
+- **`bind_address`**: The local IP address on which the server socket binds (typically `0.0.0.0` to listen on all interfaces, or an explicit private IP like `10.0.0.4`).
+- **`advertised_endpoint`**: The globally routable public IP address or DNS hostname (e.g. `203.0.113.10:9877` or `vpn.enterprise.com:9877`) distributed to remote clients.
+
+Clients connect to `advertised_endpoint`, while the host daemon listens on `bind_address`.
+
+---
+
+### NAT Traversal, Port Forwarding, and CGNAT Diagnostics
+
+QSEAL includes an integrated network categorization engine executed during onboarding (`qseal setup`) and runtime diagnostics (`qseal diagnostics`):
+
+| Network Classification | Address Range | Connectivity Behavior & Administrator Action |
 | :--- | :--- | :--- |
-| **Classical Server** | `9877` | `classical/server_identity.pub` (32 B Ed25519) |
-| **Hybrid Server** | `9879` | `hybrid/server_identity.pub` (1,984 B Dual) |
-| **PQC Server** | `9876` | `pqc/server_identity.pub` (1,952 B ML-DSA-65) |
+| **Public Direct IP** | Globally routable IPv4 / IPv6 | **Native Direct**: Inbound and outbound connections operate without translation. |
+| **Private NAT** | `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` | **Port Forwarding Required**: Edge router must forward external UDP port `9877` to host's local IP. |
+| **Carrier-Grade NAT (CGNAT)** | `100.64.0.0/10` (RFC 6598) | **Inbound Blocked**: Direct inbound connections cannot be hosted behind CGNAT. Server must use a VPS or static public IP. |
+| **Loopback** | `127.0.0.1`, `::1` | **Local IPC Only**: Suitable for unit testing and local service integration. |
 
-To launch the servers:
+---
+
+## Platform Architecture & Multi-Client Engine
+
+```
+QHack / QSEAL Platform Root
+├── securecomm/                  # Authoritative QSEAL Core Engine & Production Binaries
+│   ├── bin/
+│   │   ├── qseal                # Primary Unified Multi-Tool Executable
+│   │   └── securecomm           # Compatibility Symlink
+│   ├── include/securecomm/      # Public C API Headers (server, client, config, crypto)
+│   ├── src/
+│   │   ├── server/server.c      # Multi-Client UDP Engine with sliding replay & routing
+│   │   ├── client/client.c      # Bidirectional Client Engine with interactive console
+│   │   ├── cli/cli.c            # Command-Line Dispatcher & Network Diagnostics
+│   │   ├── config/config.c      # Atomic JSON Parser, Validator, and Serializer
+│   │   ├── setup/setup_wizard.c # Interactive & Scriptable Onboarding System
+│   │   └── identity/identity.c  # Persistent Cryptographic Key Management (0600 / 0700)
+│   └── packaging/
+│       ├── debian/build_deb.sh  # Multi-Architecture Debian Packaging Engine
+│       └── systemd/             # Production Systemd Services (qseal-server, qseal-client)
+│
+├── hybrid/                      # Hybrid Combiner Subsystem (libhybrid)
+├── pqc/                         # NIST FIPS 203/204 Subsystem (ML-KEM, ML-DSA)
+├── security_lab/                # Automated Security & Safety Verification Test Suite
+├── liboqs/                      # Open Quantum Safe Post-Quantum Cryptography Library
+└── liburing_local/              # Linux io_uring Asynchronous I/O Headers
+```
+
+### Independent Server Implementation
+
+The QSEAL Server (`qseal server start`) runs headlessly as a daemon:
+- Socket binding with `SO_REUSEADDR` and non-blocking POSIX `poll()` event multiplexing.
+- Multi-client session table tracking up to 64 active peers concurrently.
+- Heartbeat watchdog scanning active sessions every 5 seconds; drops inactive peers exceeding `session_timeout_sec` (default 60s).
+- Session zeroization on teardown via `OPENSSL_cleanse`.
+
+### Independent Client Implementation
+
+The QSEAL Client (`qseal client connect`) functions as a command-line tool or background worker:
+- Initiates ephemeral handshake with target server over UDP.
+- Enforces mutual authentication and pins server identity via Trust-On-First-Use (TOFU) or pre-shared trust store.
+- Supports both interactive full-duplex messaging and single-shot scripted delivery (`--msg "<text>"`).
+- Sends periodic heartbeats (every 3 seconds) to maintain NAT state and keep firewall UDP states alive.
+
+### Client-to-Client Routed Messaging
+
+QSEAL servers support authenticated peer-to-peer message routing:
+- Clients can address peers by numeric Client ID: `/to <id> <message>` (wire format: `to:<id>:<message>`).
+- Clients can address peers by device identifier: `/to <device_id> <message>` (e.g. `to:cli-2:Hello`).
+- Clients can broadcast to all connected peers: `/to all <message>`.
+- The server verifies session establishment, enforces isolation, and re-encrypts the routed payload to the destination peer's unique session key.
+
+### Memory Zeroization & Sliding Replay Window
+
+- **Replay Protection**: Each session maintains an independent 64-packet bitmask window (`replay_bitmap`). Out-of-order packets within the window are checked and marked; packets older than the window or previously marked are dropped immediately.
+- **Memory Zeroization**: Symmetric keys (`rx_key`, `tx_key`), shared secrets (`ss`), and private credentials are cleansed with `OPENSSL_cleanse` upon session closure.
+
+---
+
+## Quick Start & Setup Guide
+
+### Interactive Onboarding Wizard
+
+Run the interactive setup wizard on any Linux machine:
+
 ```bash
-# Terminal 1 (Classical Server):
-cd classical && ./server
-
-# Terminal 1 (Hybrid Server):
-cd hybrid && ./server
-
-# Terminal 1 (PQC Server):
-cd pqc && ./server
+qseal setup
 ```
 
-Upon startup, servers dynamically publish IP endpoints, scan hardware sensors, and display initial thermal/memory state:
-```
-╔══════════════════════════════════════════════════════════╗
-║   NEXQOR Secure Server Core ─ Classical IoT Suite        ║
-║   Architecture: Linux io_uring + Multi-Worker Pool       ║
-║   Suite: X25519 + Ed25519 + AES-128-CCM + SHA-256        ║
-╚══════════════════════════════════════════════════════════╝
-[server] Ed25519 Server Identity Public Key Loaded (32 bytes)
-[server] Active Endpoints:
-  • Localhost : 127.0.0.1:9877
-  • LAN / Wi-Fi: 192.168.1.100:9877
-[server] io_uring Event Loop Running. Ready for clients.
-```
+The wizard guides you through:
+1. Hardware architecture and SIMD capability detection (AVX2, AES-NI, NEON).
+2. Node role selection (`Server` or `Client`).
+3. Cryptographic profile selection (`Hybrid Mode` [Recommended] or `Pure PQC Mode`).
+4. Network endpoint configuration (Bind IP, UDP Port, Advertised Public Endpoint).
+5. Pre-binding socket check to verify UDP port availability.
+6. Identity generation with strict file permissions (`0600` private key, `0700` directory).
 
-### Interactive Client & Telemetry Broadcaster
+---
 
-In separate terminals, start clients:
+### Scripted & Non-Interactive Unattended Provisioning
+
+For automated deployments (Cloud-Init, Ansible, Docker):
+
 ```bash
-# Interactive mutual-auth terminal client:
-./client 127.0.0.1 9877
+# 1. Initialize Headless Server:
+qseal server init --config /etc/qseal/server.json \
+                  --port 9877 \
+                  --bind 0.0.0.0 \
+                  --advertised 203.0.113.10:9877 \
+                  --mode hybrid \
+                  --device-id srv-prod-1
 
-# Autonomous telemetry broadcaster (transmits periodic encrypted sensor datagrams):
-./client_broadcast 127.0.0.1 9877 100 500  # 100 packets, 500ms interval
+# 2. Initialize Remote Client:
+qseal client init --config /etc/qseal/client.json \
+                  --server 203.0.113.10 \
+                  --port 9877 \
+                  --mode hybrid \
+                  --device-id cli-node-1
 ```
 
 ---
 
-## Benchmarking & Empirical Evaluation
-
-### Unified Comparative Benchmark Program (`bench_pqc` / `benchpqc`)
-
-A master comparative benchmarking program is located in the root folder: **`bench_pqc`** (aliased as **`benchpqc`**). Running this single executable benchmarks **all three cryptographic suites** under identical environmental conditions and generates an empirical side-by-side evaluation across six master analytical tables.
+### Starting the Headless Server
 
 ```bash
-# Execute master comparison (default: 50 rounds, 3 runs):
-./benchpqc
-# or
-./bench_pqc
-# or via Makefile
-make bench
+# Start server using active configuration:
+qseal server start --config /etc/qseal/server.json
 
-# Specify custom rounds per run and number of runs:
-./benchpqc 100 5
-
-# Verbose mode (displays intermediate sub-suite runs):
-./benchpqc 50 3 -v
-```
-
-#### Comprehensive Evaluation Tables Generated:
-1. **Table I: Cryptographic Operations Latency Comparison (`µs`)**  
-   Measures and compares execution latencies across all 9 primitive operations (Keygen, Encaps/Decaps, Sign/Verify, Symmetric Encrypt/Decrypt, Session Key Derivation, Handshake Transcript Hashing). Highlights the fastest approach and speedup factor for each operation.
-2. **Table II: Cryptographic Operations Throughput Comparison (`ops/s`)**  
-   Evaluates sustainable computational throughput and operations per second across identical CPU cores.
-3. **Table III: Cryptographic Artifact & Network Wire Overhead (`bytes`)**  
-   Quantifies public keys, private keys, ciphertexts, signatures, and complete 4-way mutual authentication handshake sizes, calculating exact network bandwidth multiplier overhead.
-4. **Table IV: Hardware Resources & Environmental Telemetry**  
-   Reads real Linux kernel statistics and hardware sensors: Process Resident Set Size (RSS), Heap allocation via `mallinfo2`, Process Stack usage, CPU core utilization, total CPU time, CPU cycles/op, and system thermal sensor temperatures (`°C`).
-5. **Table V: Security Posture, Cryptanalysis & NIST Standardization Matrix**  
-   Contrasts post-quantum resilience, classic vs quantum security bits, Harvest-Now-Decrypt-Later (HNDL) risk, and NIST FIPS 203/204 standardization status.
-6. **Table VI: Architectural Synthesis & Trade-Off Verdict**  
-   Provides system engineering conclusions, compute-vs-wire trade-off analysis, and targeted deployment recommendations (constrained IoT vs gateway hub vs secure cloud).
-
----
-
-### Per-Suite Microbenchmark Engine (N Runs)
-
-Microbenchmarks measure cryptographic operations, system memory, CPU utilization, and real-time sensor temperature across $N$ runs:
-
-```bash
-# Syntax: ./<benchmark_binary> [rounds_per_run] [number_of_runs]
-
-# Run Classical Microbenchmark (100 rounds across 5 runs):
-./classical/bench_crypto 100 5
-
-# Run Hybrid Microbenchmark (100 rounds across 5 runs):
-./hybrid/bench_crypto 100 5
-
-# Run PQC Microbenchmark (100 rounds across 5 runs):
-./pqc/bench_pqc 100 5
-```
-
-#### Sample Benchmark Output
-```
-╔══════════════════════════════════════════════════════════════════════════════════╗
-║ NEXQOR CLASSICAL IOT SUITE: N-RUN BENCHMARK (X25519 + Ed25519 + AES-128-CCM)    ║
-╚══════════════════════════════════════════════════════════════════════════════════╝
-  Benchmark Setup: 100 rounds per run across 5 completed runs
-  Hardware Sensor: /sys/class/thermal/thermal_zone0/temp (acpitz) — Initial Temp: 58.00 °C
-  Initial Process RAM: 7.406 MB | Heap: 0.492 MB
-
-┌──────┬──────────────────┬─────────────────┬─────────────────┬────────────────────┐
-│ Run  │ Exec Time (ms)   │ Temperature (°C)│ RAM Usage (MB)  │ CPU Utilization (%)│
-├──────┼──────────────────┼─────────────────┼─────────────────┼────────────────────┤
-│    1 │          34.1205 │        58.00 °C │           7.410 │             99.95% │
-│    2 │          33.9852 │        58.00 °C │           7.410 │             99.94% │
-│    3 │          34.0118 │        58.00 °C │           7.410 │             99.96% │
-│    4 │          34.2051 │        59.00 °C │           7.410 │             99.95% │
-│    5 │          33.9510 │        59.00 °C │           7.410 │             99.97% │
-└──────┴──────────────────┴─────────────────┴─────────────────┴────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│ 1. CRYPTOGRAPHIC METRICS: X25519 Key Generation (RFC 7748)                       │
-├────────────────────────────────────────┬─────────────────────────────────────────┤
-│ Metric                                 │ Value                                   │
-├────────────────────────────────────────┼─────────────────────────────────────────┤
-│ Average Execution Time                 │             0.0215 ms                 │
-│ Minimum Execution Time                 │             0.0201 ms                 │
-│ Maximum Execution Time                 │             0.0384 ms                 │
-│ Median Execution Time                  │             0.0211 ms                 │
-│ Standard Deviation                     │             0.0018 ms                 │
-│ P95 Latency                            │             0.0242 ms                 │
-│ Throughput                             │           46511.63 ops/sec            │
-│ Public Key Size                        │                 32 bytes              │
-│ Private Key Size                       │                 32 bytes              │
-└────────────────────────────────────────┴─────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│ 2. MEMORY METRICS                                                                │
-├────────────────────────────────────────┬─────────────────────────────────────────┤
-│ Metric                                 │ Value                                   │
-├────────────────────────────────────────┼─────────────────────────────────────────┤
-│ Initial RAM Usage                      │             7.4062 MB                 │
-│ Average RAM Usage                      │             7.4095 MB                 │
-│ Peak RAM Usage                         │             7.4102 MB                 │
-│ Final RAM Usage                        │             7.4102 MB                 │
-│ RAM Increase                           │             0.0039 MB                 │
-│ Heap Memory Usage                      │             0.4922 MB                 │
-│ Stack Memory Usage                     │             136.00 KB                 │
-│ Memory Allocation Count                │   Tracked via libc mallinfo             │
-│ Memory Leaks Detected                  │                  0 (Clean zeroization)  │
-└────────────────────────────────────────┴─────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│ 3. CPU METRICS                                                                   │
-├────────────────────────────────────────┬─────────────────────────────────────────┤
-│ Metric                                 │ Value                                   │
-├────────────────────────────────────────┼─────────────────────────────────────────┤
-│ Average CPU Utilization                │             99.95 %                   │
-│ Peak CPU Utilization                   │             99.97 %                   │
-│ Total CPU Time                         │           170.2736 ms                 │
-│ CPU Cycles per Operation               │           145820.3 cycles/op          │
-└────────────────────────────────────────┴─────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│ 4. TEMPERATURE MONITORING METRICS                                                │
-├────────────────────────────────────────┬─────────────────────────────────────────┤
-│ Metric                                 │ Value                                   │
-├────────────────────────────────────────┼─────────────────────────────────────────┤
-│ Hardware Sensor Interface              │ /sys/class/thermal/thermal_zone0/temp   │
-│ Sensor Classification                  │ acpitz                                  │
-│ Initial System Temperature             │             58.00 °C                 │
-│ Average System Temperature             │             58.40 °C                 │
-│ Minimum System Temperature             │             58.00 °C                 │
-│ Maximum System Temperature             │             59.00 °C                 │
-│ Final System Temperature               │             59.00 °C                 │
-│ Temperature Delta (Final - Initial)    │             +1.00 °C                 │
-└────────────────────────────────────────┴─────────────────────────────────────────┘
-```
-
-### Concurrent Multi-Client Handshake Benchmark
-
-Tests simultaneous handshake concurrency against an active server:
-
-```bash
-# Syntax: ./<bench_nclient> [num_clients] [messages_per_client]
-
-# Example: 64 concurrent clients connecting to classical server:
-./classical/bench_nclient 64 10
-
-# Example: 64 concurrent clients connecting to hybrid server:
-./hybrid/bench_nclient 64 10
-
-# Example: 64 concurrent clients connecting to PQC server:
-./pqc/bench_nclient 64 10
+# Or run with command-line overrides:
+qseal server start --port 9877 --mode hybrid
 ```
 
 ---
 
-## Dual-Console GTK 4 Graphical Interface & app.sh
-
-NEXQOR features two native, pure-C **GTK 4 graphical consoles** (zero web wrappers or electron bloat) styled in a sleek, high-contrast **Cyber NOC Theme**:
-
-| Console Interface | Binary Path | Purpose & Visual Architecture |
-| :--- | :--- | :--- |
-| **Console 1: Server NOC Dashboard** | `ui/qhack_ui` | High-visibility Cyber NOC dashboard featuring: <br>• **Manual Start/Stop Server Button**: Operator controls server launch (`▶ Start Server` / `⏹ Stop Server`) with PID and UDP port 9877 management.<br>• **Dynamic Multi-Interface IP Discovery**: Real-time auto-discovery of active Wi-Fi (`wl*`), Ethernet (`en*`/`eth*`), and VPN interfaces via `getifaddrs`, with dynamic connection snippets and 1-second auto-refresh.<br>• **Upside Performance & Telemetry**: Live CPU, RAM, cryptographic handshake timings (KEM/DSA keygen, encapsulation, signing, verification), transit jitter, and interarrival latency placed prominently above details.<br>• **Downside Cryptographic Inspector**: Deep session inspector showing active session IDs, directional 256-bit keys (`C2S`/`S2C`), wire fingerprints, and RFC 6479 64-packet replay window.<br>• **10-Second Disconnect Watchdog**: Real-time heartbeat tracking instantly moves timed-out or disconnected clients to `DISCONNECTED SESSIONS (RECENT)`.<br>• **Clean Suite Switching**: Effortlessly transition between Pure PQC, Hybrid, and Classical IoT suites with automatic port and socket cleanup. |
-| **Console 2: Security & Attack Lab** | `security_lab/ui/attack_ui` | Interactive threat injector featuring target IP/port inputs, crypto suite selector (Classical, Hybrid, PQC, or All), 15 threat scenarios with plain-English explanations, live matrix-green terminal console on pitch black (`#000000`), smooth independent scrolling, **Abort Attack** process cancellation, live PASS/FAIL resilience cards, and one-click **Executive PDF Report** viewer. |
-
-### Running Both UIs Simultaneously (`app.sh`)
-
-To launch both interfaces side-by-side with automatic dependency verification, subproject compilation, and synchronized cleanup:
+### Connecting the Independent Client
 
 ```bash
-# Unified dual launcher:
-./app.sh
+# Start interactive encrypted chat session:
+qseal client connect 203.0.113.10 9877 --config /etc/qseal/client.json
 
-# Or via make target:
-make app
-```
-
-*Pressing `Ctrl+C` in the launcher terminal cleanly terminates both GTK 4 applications and clears runtime locks.*
-
-### Running Interfaces Individually
-
-```bash
-# Launch only Server NOC Console:
-./run_ui.sh          # or: make run-ui
-
-# Launch only Security & Attack Lab:
-./run_attack_ui.sh   # or: make run-attack-ui
+# Or send a single automated telemetry payload and exit:
+qseal client connect 203.0.113.10 9877 --msg "Telemetry payload: System OK"
 ```
 
 ---
 
-## Real-Network Security Evaluation & Threat Injection Lab (`security_lab`)
+## CLI Reference
 
-The `security_lab/` framework is a pure-C security testing and resilience evaluation engine that subjects running client and server implementations to real network impairments and active cryptographic threat vectors:
+```text
+Usage: qseal <command> [options]
 
-### 15 Implemented Threat & Impairment Vectors:
-1. **[BASE] Normal Baseline Operation:** Measures clean round-trip latency, baseline throughput, and delivery rate under optimal network conditions.
-2. **[LOSS] Packet Drop Resilience:** Simulates 15% deterministic network loss to test client retransmission and state preservation.
-3. **[JITR] Delay & Variable Jitter:** Injects 30ms ± 15ms packet transit delays to test timeout handling and timestamp validation.
-4. **[RORD] Out-of-Order Delivery:** Shuffles delivery sequence to test reordering buffers and sliding sequence windows.
-5. **[DUPL] Packet Duplication Injection:** Duplicates valid datagrams in-transit to test anti-replay window suppression.
-6. **[DISC] Temporary Link Drop:** Drops all packets for 2 seconds to verify session heartbeat recovery and re-handshake triggers.
-7. **[PMTU] Path MTU Exceeded:** Tests transmission across MTU boundary limits from 512B to 4096B to check fragmentation handling.
-8. **[RPLY] Anti-Replay Counter Attack:** Deliberately injects duplicate sequence numbers, stale counters, and cross-session replays.
-9. **[TAMP] Ciphertext Bit-Flip Attack:** Modifies encrypted payload bits and MAC tags in-transit to verify AEAD tamper detection.
-10. **[AUTH] Invalid Identity Attack:** Injects forged digital signatures and unrecognized public keys to test peer authentication rejection.
-11. **[HSHK] Out-of-Order Handshake:** Transmits handshake phases in reverse or incomplete sequence to test state-machine bounds checking.
-12. **[FUZZ] Malformed Frame Fuzzing:** Floods the socket with truncated headers, invalid wire IDs, and pseudo-random fuzz payloads.
-13. **[STRS] Resource Queue Saturation:** Launches 16 parallel handshake requests simultaneously to evaluate server worker pool queue handling.
-14. **[ISOL] Cross-Session Injection:** Replays valid session packets into a neighboring client's socket to verify session cryptographic isolation.
-15. **[ALL] Full Suite Evaluation:** Sequentially executes all 14 scenarios across all 3 cryptographic implementations (Classical, Hybrid, PQC).
+Platform Management Commands:
+  setup                     Run guided interactive onboarding setup wizard
+  detect                    Detect hardware, CPU SIMD features, memory, and crypto backends
+  diagnostics               Run comprehensive network, port, NAT, and crypto diagnostics
+  status                    Display service configuration and running state
+  benchmark                 Run cryptographic microbenchmarks (Hybrid & Pure PQC)
 
-### Running Security Tests via CLI:
-```bash
-# Run baseline against running PQC server:
-./security_lab/security_lab --suite pqc --scenario baseline --target 127.0.0.1
+Server Commands:
+  server [start] [port]     Launch independent QSEAL UDP server (default: 0.0.0.0:9877)
+  server init               Initialize server identity keys and default configuration
 
-# Run replay protection test against hybrid implementation:
-./security_lab/security_lab --suite hybrid --scenario replay --target 127.0.0.1
+Client Commands:
+  client [connect] [host]   Establish secure quantum-safe tunnel to server
+  client init               Initialize client identity keys and default configuration
 
-# Run complete comparative security matrix across all 3 suites:
-./security_lab/security_lab --suite all --scenario all --target 127.0.0.1
-```
+Configuration & Profiles:
+  config validate           Validate syntax, permissions, and network settings of config
+  config show               Display active configuration with secret redaction
+  profiles list             List registered cryptographic profiles (Hybrid, PQC)
+  profiles check            Check hardware and library compatibility for each profile
 
-### Automated Executive PDF & Audit Reports
-
-All evaluation runs generate structured audit artifacts stored in `security_lab/results/latest/`:
-- **`report.pdf`**: Formatted Executive PDF Report complete with system details, executive summary, comprehensive scenario verdicts, and formal security conclusions. Compiled automatically via `generate_pdf.py` and openable directly via the GTK 4 UI (`View PDF Report` button).
-- **`report.md`**: Clean GitHub-flavored markdown report with structured scenario comparison tables and cryptographic status.
-- **`metrics.csv`**: Granular numerical log containing per-scenario latency, packet loss, delivery percentage, and heap usage.
-- **`scenario_results.json`**: Machine-readable JSON schema for CI/CD automated ingestion.
-- **`audit.log`**: Nanosecond-timestamped protocol event log.
-
----
-
-## Formal Security Verification
-
-
-Both the **Classical** and **Post-Quantum** protocols have been formally modeled and verified in **ProVerif 2.05**:
-- Classical Model: `classical/verification/protocol.pv`
-- PQC Model: `pqc/verification/protocol.pv`
-
-### Proverif Verification Queries
-| Security Property | Query | Verification Result |
-| :--- | :--- | :--- |
-| **Server Secrecy** | `query secret server_secret` | **RESULT: TRUE** (Protected) |
-| **Client Secrecy** | `query secret client_secret` | **RESULT: TRUE** (Protected) |
-| **Mutual Authentication (Client -> Server)** | `event(client_accepts(srv_pk, sid)) ==> event(server_auth(srv_pk, sid))` | **RESULT: TRUE** (Injective Match) |
-| **Mutual Authentication (Server -> Client)** | `event(server_accepts(cli_pk, sid)) ==> event(client_auth(cli_pk, sid))` | **RESULT: TRUE** (Injective Match) |
-| **Perfect Forward Secrecy (PFS)** | Secrecy of past traffic under identity compromise | **RESULT: TRUE** (Proved) |
-| **Replay & Injection Resistance** | Monotonic session counter and sliding replay window | **RESULT: TRUE** (Proved) |
-
-To run the formal verification models:
-```bash
-proverif classical/verification/protocol.pv
-proverif pqc/verification/protocol.pv
+Global Options:
+  --server <ip/host>        Target server IP address or hostname
+  --port <port>             Target or bind UDP port (default: 9877)
+  --bind <ip>               Server bind address (default: 0.0.0.0)
+  --advertised <ip/host>    Server globally advertised public endpoint
+  --device-id <id>          Set local node identifier
+  --mode <hybrid|pqc>       Enforce cryptographic mode (default: hybrid)
+  --config <path>           Specify explicit configuration file path
+  --msg <text>              Send single message and exit (non-interactive)
+  --non-interactive         Run setup non-interactively for automated deployments
+  --version, -v             Display version information
+  --help, -h                Display this help message
 ```
 
 ---
 
-## Repository Maintenance & Hygiene
+## Configuration Specification & Schemas
 
-- **Root-Only Git Tracking**: The repository root contains the sole `.git` directory.
-- **Strict Hygiene**: No compiled binaries, static libraries (`*.a`), object files (`*.o`), or cryptographic keys (`*.key`, `*.pub`) are tracked in version control.
-- **Self-Contained Subprojects**: Each of `classical/`, `hybrid/`, and `pqc/` can be moved or distributed independently while relying only on system OpenSSL and root shared libraries.
+QSEAL configurations are stored in JSON format at `/etc/qseal/qseal.json` (or `~/.config/qseal/qseal.json` for non-root users):
+
+```json
+{
+  "version": 1,
+  "role": "server",
+  "mode": "hybrid",
+  "profile_id": "profile-hybrid-1",
+  "network": {
+    "bind_address": "0.0.0.0",
+    "advertised_endpoint": "203.0.113.10:9877",
+    "server_address": "127.0.0.1",
+    "server_host": "127.0.0.1",
+    "port": 9877,
+    "connect_timeout_ms": 5000,
+    "reconnect_attempts": 5,
+    "heartbeat_interval_sec": 15,
+    "session_timeout_sec": 60,
+    "allow_client_to_client": true
+  },
+  "identity": {
+    "device_id": "srv-prod-1",
+    "private_key_path": "/etc/qseal/srv-prod-1.key",
+    "public_key_path": "/etc/qseal/srv-prod-1.pub",
+    "trust_store_path": "/etc/qseal/trust_store.txt",
+    "require_client_auth": true
+  },
+  "policy": {
+    "require_quantum_resistance": true,
+    "require_quantum_auth": false,
+    "require_dual_combiner": false,
+    "allow_classical_fallback": false,
+    "require_fips_algorithms": true,
+    "max_acceptable_latency_ms": 500,
+    "max_memory_budget_mb": 256,
+    "allow_tofu": true,
+    "preference": "balanced"
+  },
+  "resources": {
+    "max_concurrent_sessions": 64,
+    "rx_buffer_kb": 256,
+    "worker_threads": 4
+  },
+  "logging": {
+    "level": "info",
+    "file": ""
+  },
+  "auto_start_service": false
+}
+```
+
+---
+
+## Debian Packaging & Systemd Services
+
+QSEAL builds native `.deb` packages for production Debian, Ubuntu, Linux Mint, and Raspberry Pi OS distributions:
+
+```bash
+# Build all 3 Debian packages:
+make package
+```
+
+Generated packages in `securecomm/packaging/debian/`:
+- `qseal-amd64.deb`: 64-bit x86 servers, desktops, cloud VMs.
+- `qseal-arm64.deb`: Raspberry Pi 4/5, NVIDIA Jetson, AWS Graviton.
+- `qseal-arm32.deb`: Raspberry Pi 2/3 running 32-bit Raspbian (`armhf`).
+
+### Installation & Security Hardening
+
+```bash
+# Install package:
+sudo dpkg -i securecomm/packaging/debian/qseal-amd64.deb
+
+# Package post-installation automatically sets strict permissions:
+# - /etc/qseal      -> 0700 (Owner: root)
+# - /var/lib/qseal  -> 0700 (Owner: root)
+# - /var/log/qseal  -> 0750 (Owner: root)
+# - *.key           -> 0600 (Owner: root)
+```
+
+### Systemd Service Management
+
+```bash
+# Start Server Service:
+sudo systemctl enable --now qseal-server
+
+# Check Server Status:
+sudo systemctl status qseal-server
+
+# Start Client Service:
+sudo systemctl enable --now qseal-client
+```
+
+---
+
+## Empirical Performance & Microbenchmark Results
+
+Benchmarked on host hardware: AMD Ryzen 5 5500U (12 cores, AVX2 enabled, Linux 6.8):
+
+### 1. Cryptographic Primitive Performance
+
+| Operation | Algorithm | Mean Latency | Throughput | Wire Size |
+| :--- | :--- | :---: | :---: | :---: |
+| **KEX Keygen (Hybrid)** | X25519 + ML-KEM-768 | **0.074 ms** | 13,548 ops/sec | 1,216 bytes |
+| **KEX Encapsulation (Hybrid)** | X25519 + ML-KEM-768 | **0.131 ms** | 7,643 ops/sec | 1,120 bytes |
+| **KEX Decapsulation (Hybrid)** | X25519 + ML-KEM-768 | **0.092 ms** | 10,879 ops/sec | 64 bytes |
+| **KEX Keygen (Pure PQC)** | ML-KEM-768 (FIPS 203) | **0.036 ms** | 27,884 ops/sec | 1,184 bytes |
+| **KEX Encapsulation (Pure PQC)** | ML-KEM-768 (FIPS 203) | **0.019 ms** | 53,661 ops/sec | 1,088 bytes |
+| **KEX Decapsulation (Pure PQC)** | ML-KEM-768 (FIPS 203) | **0.022 ms** | 46,071 ops/sec | 32 bytes |
+| **DSA Sign (Pure PQC)** | ML-DSA-65 (FIPS 204) | **0.130 ms** | 7,671 ops/sec | 3,309 bytes |
+| **DSA Verify (Pure PQC)** | ML-DSA-65 (FIPS 204) | **0.046 ms** | 21,596 ops/sec | 3,309 bytes |
+| **AEAD Encrypt (1 KB)** | ChaCha20-Poly1305 | **0.001 ms** | **6,015 Mbps (6.0 Gbps)** | 1,024 bytes |
+
+### 2. Live Client-Server Handshake Latencies
+
+| Mode | Measured End-to-End Handshake Latency | Memory Footprint (RSS) |
+| :--- | :---: | :---: |
+| **Pure PQC Mode** (ML-KEM-768 + ML-DSA-65) | **2.31 ms** | 8.5 MB |
+| **Hybrid Mode** (X25519 + ML-KEM-768) | **3.73 ms** | 8.7 MB |
+| **Legacy Baseline (Pre-Quantum Reference)** | **3.34 ms** | 8.4 MB |
+
+---
+
+## Automated Verification & Test Suites
+
+QSEAL includes a comprehensive hierarchy of automated regression, safety, and integration test suites:
+
+```bash
+# 1. Run QSEAL Core Engine Unit Tests:
+make -C securecomm unit_tests
+
+# 2. Run Real UDP Client-Server Integration Tests:
+make -C securecomm integration_tests
+
+# 3. Run Security & Safety Guard Allowlist Verification:
+make -C security_lab test
+
+# 4. Run All Subsystem Regression Tests:
+make test
+```
+
+All test suites execute against live cryptographic primitives and real network sockets without mock stubs.
+
+---
+
+## Optional GTK 4 Security Lab Console
+
+While QSEAL is completely headless and requires no GUI to function, a pure-C GTK 4 Security & Attack Lab console is optionally available for interactive security scenario execution:
+
+```bash
+# Build and run GTK 4 Security & Attack Lab Console:
+./run_attack_ui.sh
+```
+
+- **Headless Guarantee**: Server-client communication operates 100% independently via `qseal server start` and `qseal client connect` without any graphical dependencies.
+
+---
+
+## Repository Organization & Hygiene
+
+- No build artifacts or private keys (`*.key`, `*.pem`, `*.o`, `*.deb`) are tracked in source control.
+- All temporary integration test files write strictly to `/tmp/`.
+- Private cryptographic keys created by QSEAL are locked with `chmod 0600` at creation time.
+- Fully compatible with standard Linux distribution packaging standards.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+QSEAL is licensed under the [MIT License](LICENSE).
+Open Quantum Safe primitives are provided under the liboqs Apache 2.0 / MIT license.
+OpenSSL EVP engines are provided under the Apache 2.0 license.

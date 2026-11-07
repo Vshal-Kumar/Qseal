@@ -20,19 +20,30 @@ extern "C" {
 #endif
 
 typedef struct {
+    char host[SECURECOMM_MAX_IP_LEN];
+    uint16_t port;
+    char fingerprint[65];
+    uint32_t priority;
+    bool enabled;
+} qseal_server_entry_t;
+
+typedef struct {
     uint32_t version;                                /* Config schema version (e.g. 1) */
     securecomm_role_t role;                          /* SERVER or CLIENT */
     securecomm_mode_t mode;                          /* CLASSICAL, PQC, HYBRID, ADAPTIVE */
     char profile_id[SECURECOMM_MAX_PROFILE_NAME];    /* Target or preferred profile */
     
     /* Network Settings */
-    char bind_address[SECURECOMM_MAX_IP_LEN];        /* Server bind IP (e.g. "127.0.0.1") */
+    char bind_address[SECURECOMM_MAX_IP_LEN];        /* Server local listening IP (e.g. "0.0.0.0", "::") */
+    char advertised_endpoint[SECURECOMM_MAX_IP_LEN];/* Globally reachable public IP/host & port */
     char server_address[SECURECOMM_MAX_IP_LEN];      /* Remote server IP/host for client */
     char server_host[SECURECOMM_MAX_IP_LEN];         /* Alias for server_address */
-    uint16_t port;                                   /* UDP port (e.g. 9877, 9879, 9885) */
+    uint16_t port;                                   /* UDP listening/connect port (default: 9877) */
     uint32_t connect_timeout_ms;                     /* Handshake timeout */
     uint32_t connection_timeout_ms;                  /* Alias for connect_timeout_ms */
     uint32_t reconnect_attempts;                     /* Auto-reconnect count (0=infinite) */
+    uint32_t heartbeat_interval_sec;                 /* Heartbeat interval in seconds (default: 15) */
+    uint32_t session_timeout_sec;                    /* Inactivity session timeout in seconds (default: 60) */
     
     /* Identity & Trust Settings */
     char device_id[SECURECOMM_MAX_ID_LEN];           /* Local device identifier */
@@ -42,6 +53,13 @@ typedef struct {
     char expected_server_id[SECURECOMM_MAX_ID_LEN];  /* Target server expected identity */
     bool require_client_auth;                        /* Enforce mutual client authentication */
     bool allow_tofu;                                 /* Trust on first use */
+    
+    /* Multi-Server Scalability (Client) */
+    qseal_server_entry_t servers[8];                 /* Multi-server fallback list */
+    uint32_t server_count;                           /* Number of configured servers */
+    
+    /* Network & Routing Capabilities */
+    bool allow_client_to_client;                     /* Allow client-to-client relaying/messaging */
     
     /* Resource & Performance Limits */
     uint32_t max_concurrent_sessions;                /* Max concurrent client sessions */
@@ -58,6 +76,8 @@ typedef struct {
     /* System Service Options */
     bool auto_start_service;
 } securecomm_config_t;
+
+typedef securecomm_config_t qseal_config_t;
 
 /* Initialize configuration with sane, safe defaults */
 void securecomm_config_init_default(securecomm_config_t *cfg);

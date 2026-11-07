@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
@@ -29,6 +30,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <openssl/rand.h>
+#include <openssl/crypto.h>
 
 static void get_random_bytes(void *buf, size_t len) {
     if (RAND_bytes((unsigned char *)buf, (int)len) != 1) {
@@ -65,6 +67,7 @@ typedef struct {
     bool in_use;
     bool established;
     uint16_t client_id;
+    char device_id[64];
     uint32_t msg_count;
     uint64_t session_id;
     struct sockaddr_in peer_addr;
@@ -150,6 +153,9 @@ static void free_session(securecomm_server_t *server, session_t *s) {
     }
     s->in_use = false;
     s->established = false;
+    OPENSSL_cleanse(s->rx_key, sizeof(s->rx_key));
+    OPENSSL_cleanse(s->tx_key, sizeof(s->tx_key));
+    OPENSSL_cleanse(s->client_eph_pk, sizeof(s->client_eph_pk));
     if (server->active_sessions_count > 0) {
         server->active_sessions_count--;
         server->metrics.active_sessions = server->active_sessions_count;
@@ -651,9 +657,14 @@ int securecomm_server_run(securecomm_server_t *server) {
     fcntl(server->sock_fd, F_SETFL, flags | O_NONBLOCK);
 
     server->running = 1;
-    SECURECOMM_LOG_INFO("SecureComm Server listening on %s:%u [mode: %s]",
+    SECURECOMM_LOG_INFO("QSEAL Server successfully listening on %s:%u [mode: %s]",
                         server->cfg.bind_address, server->cfg.port,
                         securecomm_mode_to_string(server->cfg.mode));
+    if (strlen(server->cfg.advertised_endpoint) > 0) {
+        SECURECOMM_LOG_INFO("QSEAL Advertised Public Endpoint: %s", server->cfg.advertised_endpoint);
+    } else {
+        SECURECOMM_LOG_INFO("QSEAL Advertised Endpoint: Direct Host on port %u", server->cfg.port);
+    }
 
     uint8_t rx_buf[RX_BUF_SIZE];
     uint8_t tx_buf[RX_BUF_SIZE];
@@ -688,13 +699,14 @@ int securecomm_server_run(securecomm_server_t *server) {
 
         uint64_t now_sec = get_time_sec();
 
-        /* Clean expired sessions (120s inactivity threshold for responsive disconnect detection) */
+        /* Clean expired sessions based on configured session timeout */
+        uint32_t timeout_thresh = server->cfg.session_timeout_sec > 0 ? server->cfg.session_timeout_sec : 60;
         if (now_sec - last_clean_sec >= 5) {
             bool any_expired = false;
             for (int i = 0; i < MAX_SESSIONS; i++) {
-                if (server->sessions[i].in_use && (now_sec - server->sessions[i].last_seen_sec > 120)) {
-                    SECURECOMM_LOG_INFO("Session %016lx expired due to inactivity (>120s)",
-                                        server->sessions[i].session_id);
+                if (server->sessions[i].in_use && (now_sec - server->sessions[i].last_seen_sec > timeout_thresh)) {
+                    SECURECOMM_LOG_INFO("Session %016lx expired due to inactivity (>%us)",
+                                        (unsigned long)server->sessions[i].session_id, timeout_thresh);
                     free_session(server, &server->sessions[i]);
                     any_expired = true;
                 }
@@ -747,48 +759,35 @@ int securecomm_server_run(securecomm_server_t *server) {
                 memcpy(s->client_eph_pk, payload, payload_len);
             }
 
-            /* Encapsulate / derive shared secret using backend */
+            /* Encapsulate shared secret using real backend */
             uint8_t ct[2048], ss[64];
             size_t ct_len = sizeof(ct), ss_len = sizeof(ss);
-            bool is_iot_fallback = false;
 
             if (server->backend->kex_encapsulate(server->backend, s->client_eph_pk, s->client_eph_pk_len,
                                                  ct, &ct_len, ss, &ss_len) != SECURECOMM_SUCCESS) {
-                SECURECOMM_LOG_WARN("Adaptive KEX fallback engaged for IoT client %s", client_ip);
-                ct_len = 1088;
-                for (size_t i = 0; i < ct_len; i++) ct[i] = (uint8_t)(i * 7);
-                ss_len = 32;
-                for (size_t i = 0; i < ss_len; i++) ss[i] = (uint8_t)(i ^ 0x5C);
-                s->established = true;
-                is_iot_fallback = true;
+                SECURECOMM_LOG_ERROR("KEX encapsulation failed for client %s — rejecting handshake", client_ip);
+                free_session(server, s);
+                continue;
             }
 
-            /* Derive directional keys */
+            /* Derive directional keys using real KDF */
             uint8_t salt[16] = {0};
-            if (is_iot_fallback) {
-                /* Embedded IoT client (ESP32): key directly mirrors negotiated shared secret */
-                memcpy(s->rx_key, ss, 32);
-                memcpy(s->tx_key, ss, 32);
-            } else if (server->backend->kdf_derive_session_keys(server->backend, ss, ss_len, salt, sizeof(salt),
+            if (server->backend->kdf_derive_session_keys(server->backend, ss, ss_len, salt, sizeof(salt),
                                                         s->rx_key, 32, s->tx_key, 32) != SECURECOMM_SUCCESS) {
-                memcpy(s->rx_key, ss, 32);
-                memcpy(s->tx_key, ss, 32);
+                SECURECOMM_LOG_ERROR("KDF key derivation failed for client %s — rejecting handshake", client_ip);
+                free_session(server, s);
+                continue;
             }
 
             /* Sign transcript (ct) with server identity */
             uint8_t sig[4096];
             size_t sig_len = sizeof(sig);
-            if (is_iot_fallback) {
-                /* Embedded IoT client (ESP32): use compact 64-byte signature digest
-                 * so that the full SERVER_HELLO datagram (1,172 B) fits within standard
-                 * 1,472-byte unfragmented Ethernet MTU without IP packet fragmentation. */
-                sig_len = 64;
-                memset(sig, 0xAB, sig_len);
-            } else if (server->backend->dsa_sign(server->backend, ct, ct_len,
+            if (server->backend->dsa_sign(server->backend, ct, ct_len,
                                           server->ident.private_key, server->ident.private_key_len,
                                           sig, &sig_len) != SECURECOMM_SUCCESS) {
-                sig_len = 64;
-                memset(sig, 0xAB, sig_len);
+                SECURECOMM_LOG_ERROR("Server digital signature creation failed — rejecting handshake");
+                free_session(server, s);
+                continue;
             }
 
             /* Send SERVER_HELLO: [ct_len(2) | ct | sig_len(2) | sig] */
@@ -813,34 +812,14 @@ int securecomm_server_run(securecomm_server_t *server) {
             sendto(server->sock_fd, tx_buf, sizeof(wire_hdr_t) + total_payload, 0,
                    (struct sockaddr *)&client_addr, sizeof(client_addr));
             securecomm_metrics_record_packet_tx(&server->metrics, sizeof(wire_hdr_t) + total_payload);
-
-            if (s->established) {
-                ipc_push_client_list(server);
-                SECURECOMM_LOG_INFO("[CLIENT CONNECTED] IoT Node #%u (%s:%u, SID: 0x%016lx)",
-                                    s->client_id, client_ip, ntohs(client_addr.sin_port),
-                                    (unsigned long)s->session_id);
-            }
             continue;
         }
 
         /* ─── Match Existing Session ───────────────────────────────── */
         session_t *s = find_session(server, hdr.session_id, &client_addr);
         if (!s) {
-            if (hdr.type == PKT_DATA) {
-                s = allocate_session(server, &client_addr);
-                if (s) {
-                    s->session_id = hdr.session_id;
-                    s->established = true;
-                    s->last_rx_seq = hdr.seq;
-                    ipc_push_client_list(server);
-                    SECURECOMM_LOG_INFO("[IoT AUTO-REGISTER] Registered active ESP32 node #%u at %s:%u (SID: 0x%016lx)",
-                                        s->client_id, client_ip, ntohs(client_addr.sin_port), (unsigned long)s->session_id);
-                }
-            }
-            if (!s) {
-                server->metrics.packets_dropped++;
-                continue;
-            }
+            server->metrics.packets_dropped++;
+            continue;
         }
         s->last_seen_sec = now_sec;
 
@@ -898,6 +877,7 @@ int securecomm_server_run(securecomm_server_t *server) {
             }
 
             s->established = true;
+            strncpy(s->device_id, client_id, sizeof(s->device_id) - 1);
             SECURECOMM_LOG_INFO("Session %016lx ESTABLISHED for peer '%s' [%s:%u]",
                                 s->session_id, client_id, client_ip, ntohs(client_addr.sin_port));
             securecomm_metrics_record_handshake(&server->metrics, 1.5, true);
@@ -910,7 +890,10 @@ int securecomm_server_run(securecomm_server_t *server) {
         /* ─── 3. ENCRYPTED APPLICATION DATA ───────────────────────── */
         if (hdr.type == PKT_DATA) {
             if (!s->established) {
-                s->established = true;
+                SECURECOMM_LOG_WARN("Dropping unauthenticated data packet on pending session %016lx from %s",
+                                    (unsigned long)s->session_id, client_ip);
+                server->metrics.packets_dropped++;
+                continue;
             }
 
             /* Format: [nonce(12) | tag(16) | ciphertext] */
@@ -927,49 +910,75 @@ int securecomm_server_run(securecomm_server_t *server) {
                                               (const uint8_t *)&hdr, sizeof(wire_hdr_t),
                                               tag, 16, nonce, 12, s->rx_key, 32,
                                               plaintext, &pt_len) != SECURECOMM_SUCCESS) {
-                /* Decryption recovery for embedded IoT nodes */
-                bool recovered = false;
-                for (size_t i = 0; i < ct_len && i < sizeof(plaintext) - 1; i++) {
-                    plaintext[i] = ciphertext[i] ^ s->rx_key[i % 32];
-                }
-                plaintext[ct_len < sizeof(plaintext) ? ct_len : sizeof(plaintext) - 1] = '\0';
-                if (ct_len > 0 && (plaintext[0] == '{' || plaintext[0] == '[')) {
-                    pt_len = ct_len;
-                    recovered = true;
-                }
-                if (!recovered && ct_len > 0 && (ciphertext[0] == '{' || ciphertext[0] == '[')) {
-                    memcpy(plaintext, ciphertext, ct_len < sizeof(plaintext) ? ct_len : sizeof(plaintext) - 1);
-                    pt_len = ct_len < sizeof(plaintext) ? ct_len : sizeof(plaintext) - 1;
-                    recovered = true;
-                }
-                if (!recovered) {
-                    for (size_t i = 0; i < ct_len && i < sizeof(plaintext) - 1; i++) {
-                        plaintext[i] = ciphertext[i] ^ (uint8_t)(i ^ 0x5C);
-                    }
-                    plaintext[ct_len < sizeof(plaintext) ? ct_len : sizeof(plaintext) - 1] = '\0';
-                    if (ct_len > 0 && (plaintext[0] == '{' || plaintext[0] == '[')) {
-                        pt_len = ct_len;
-                        recovered = true;
-                    }
-                }
-                if (!recovered) {
-                    SECURECOMM_LOG_ERROR("AEAD authentication/decryption failed on session %016lx", (unsigned long)s->session_id);
-                    server->metrics.packets_dropped++;
-                    continue;
-                }
+                SECURECOMM_LOG_ERROR("AEAD authentication/decryption failed on session %016lx: MAC verification failure",
+                                     (unsigned long)s->session_id);
+                server->metrics.packets_dropped++;
+                continue;
             }
 
             plaintext[pt_len < sizeof(plaintext) ? pt_len : sizeof(plaintext) - 1] = '\0';
-            SECURECOMM_LOG_INFO("[RECV msg: %s] (len=%zu) from session %016lx",
-                                plaintext, pt_len, s->session_id);
+            SECURECOMM_LOG_INFO("[RECV msg: %s] (len=%zu) from session %016lx (Client #%u)",
+                                plaintext, pt_len, (unsigned long)s->session_id, s->client_id);
 
-            printf("\n\033[1;32m[SERVER ← ESP32 Node #%u (%s:%u)]\033[0m %s (Payload: %zu bytes)\n",
+            printf("\n\033[1;32m[SERVER ← Client #%u (%s:%u)]\033[0m %s (Payload: %zu bytes)\n",
                    s->client_id, client_ip, ntohs(client_addr.sin_port), plaintext, pt_len);
             fflush(stdout);
 
             s->msg_count++;
-            ipc_push_rx_msg(s->client_id, client_ip, ntohs(client_addr.sin_port), s->session_id, (const char *)plaintext, (uint32_t)pt_len, s->msg_count);
+            ipc_push_rx_msg(s->client_id, client_ip, ntohs(client_addr.sin_port), s->session_id,
+                            (const char *)plaintext, (uint32_t)pt_len, s->msg_count);
             ipc_push_client_list(server);
+
+            /* Client-to-client routing: format "to:<target>:<message>" */
+            if (server->cfg.allow_client_to_client && strncmp((const char *)plaintext, "to:", 3) == 0) {
+                const char *colon = strchr((const char *)plaintext + 3, ':');
+                if (colon) {
+                    char target_str[64] = {0};
+                    size_t tlen = (size_t)(colon - ((const char *)plaintext + 3));
+                    if (tlen < sizeof(target_str)) {
+                        memcpy(target_str, (const char *)plaintext + 3, tlen);
+                        const char *fwd_msg = colon + 1;
+
+                        char routed_msg[RX_BUF_SIZE];
+                        snprintf(routed_msg, sizeof(routed_msg), "[From Client #%u (%s)]: %s",
+                                 s->client_id, s->device_id[0] ? s->device_id : "peer", fwd_msg);
+                        size_t routed_len = strlen(routed_msg);
+
+                        if (strcasecmp(target_str, "all") == 0 || strcasecmp(target_str, "broadcast") == 0) {
+                            for (int i = 0; i < MAX_SESSIONS; i++) {
+                                if (server->sessions[i].in_use && server->sessions[i].established &&
+                                    server->sessions[i].session_id != s->session_id) {
+                                    session_send_data(server, &server->sessions[i], (const uint8_t *)routed_msg, routed_len);
+                                }
+                            }
+                            SECURECOMM_LOG_INFO("Relayed broadcast from client #%u ('%s') to all active peers",
+                                                s->client_id, s->device_id);
+                        } else {
+                            uint16_t target_cid = (uint16_t)atoi(target_str);
+                            bool found = false;
+                            for (int i = 0; i < MAX_SESSIONS; i++) {
+                                if (server->sessions[i].in_use && server->sessions[i].established &&
+                                    server->sessions[i].session_id != s->session_id) {
+                                    if ((target_cid > 0 && server->sessions[i].client_id == target_cid) ||
+                                        (server->sessions[i].device_id[0] != '\0' && strcasecmp(server->sessions[i].device_id, target_str) == 0)) {
+                                        session_send_data(server, &server->sessions[i], (const uint8_t *)routed_msg, routed_len);
+                                        found = true;
+                                        SECURECOMM_LOG_INFO("Relayed message from client #%u ('%s') to client #%u ('%s')",
+                                                            s->client_id, s->device_id,
+                                                            server->sessions[i].client_id, server->sessions[i].device_id);
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!found) {
+                                char err_msg[128];
+                                snprintf(err_msg, sizeof(err_msg), "[Server Error]: Target client '%s' not connected", target_str);
+                                session_send_data(server, s, (const uint8_t *)err_msg, strlen(err_msg));
+                            }
+                        }
+                    }
+                }
+            }
 
             /* Reply with ACK */
             send_ack(server, s, hdr.seq);

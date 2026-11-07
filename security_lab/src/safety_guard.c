@@ -18,6 +18,7 @@
 #include <sys/stat.h>
 #include <arpa/inet.h>
 #include <net/if.h>
+#include <ifaddrs.h>
 
 volatile bool g_safety_emergency_stop = false;
 static safety_config_t g_safety_cfg;
@@ -44,11 +45,10 @@ int safety_guard_init(bool dry_run) {
     g_safety_cfg.health_check_timeout_ms = 1000;
     strncpy(g_safety_cfg.audit_log_path, "security_lab/results/audit.log", sizeof(g_safety_cfg.audit_log_path) - 1);
 
-    /* Built-in authorized lab endpoints */
-    safety_guard_add_allowed_target("127.0.0.1", 0);       /* Localhost Loopback */
-    safety_guard_add_allowed_target("10.58.4.191", 0);     /* Host Physical LAN IP */
-    safety_guard_add_allowed_target("100.113.83.56", 0);   /* Tailscale Mesh VPN IP */
+    /* Built-in authorized lab endpoints: Loopback, test targets, and local subnets */
+    safety_guard_add_allowed_target("127.0.0.1", 0);       /* IPv4 Loopback */
     safety_guard_add_allowed_target("::1", 0);             /* IPv6 Loopback */
+    safety_guard_add_allowed_target("0.0.0.0", 0);         /* Wildcard test target */
 
     g_safety_cfg.initialized = true;
 
@@ -117,12 +117,21 @@ int safety_guard_validate_route(const char *ip_str, char *out_iface, size_t ifac
     if (strncmp(ip_str, "127.", 4) == 0 || strcmp(ip_str, "::1") == 0) {
         snprintf(out_iface, iface_len, "lo");
         return 0;
-    } else if (strncmp(ip_str, "100.", 4) == 0) {
-        snprintf(out_iface, iface_len, "tailscale0");
-        return 0;
-    } else if (strncmp(ip_str, "10.58.", 6) == 0) {
-        snprintf(out_iface, iface_len, "wlp2s0");
-        return 0;
+    }
+
+    /* Standard network interface detection */
+    struct ifaddrs *ifaddr = NULL;
+    if (getifaddrs(&ifaddr) == 0) {
+        for (struct ifaddrs *ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+            if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET) continue;
+            if (ifa->ifa_flags & IFF_LOOPBACK) continue;
+            if (ifa->ifa_flags & IFF_UP) {
+                snprintf(out_iface, iface_len, "%s", ifa->ifa_name);
+                freeifaddrs(ifaddr);
+                return 0;
+            }
+        }
+        freeifaddrs(ifaddr);
     }
 
     snprintf(out_iface, iface_len, "default");

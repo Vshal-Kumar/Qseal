@@ -1,10 +1,11 @@
 #!/bin/bash
 set -euo pipefail
+umask 0022
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 VERSION=$(cat "${PKG_ROOT}/VERSION" | tr -d '[:space:]')
-PKG_NAME="securecomm"
+PKG_NAME="qseal"
 
 # Target requested: 'all', 'x86amd', 'arm64', 'arm32' (or auto/host)
 TARGET_REQUEST="${1:-all}"
@@ -23,7 +24,7 @@ fi
 
 # Ensure native host binary is built
 cd "${PKG_ROOT}"
-if [ ! -f "bin/securecomm" ]; then
+if [ ! -f "bin/qseal" ] && [ ! -f "bin/securecomm" ]; then
     echo "[*] Compiling native host binary..."
     make all
 fi
@@ -31,7 +32,7 @@ fi
 # Function to compile ARM64 binary if toolchain is available
 compile_arm64_binary() {
     if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
-        echo "[*] Cross-compiling SecureComm native ARM64 (AArch64) binary with static liboqs..."
+        echo "[*] Cross-compiling QSEAL native ARM64 (AArch64) binary with static liboqs..."
         mkdir -p "${PKG_ROOT}/packaging/debian/compat/openssl"
         if [ -f "/usr/include/x86_64-linux-gnu/openssl/opensslconf.h" ]; then
             cp -n /usr/include/x86_64-linux-gnu/openssl/opensslconf.h \
@@ -39,8 +40,8 @@ compile_arm64_binary() {
                   "${PKG_ROOT}/packaging/debian/compat/openssl/" 2>/dev/null || true
         fi
 
-        mkdir -p "/tmp/securecomm_arm64_build"
-        cat << 'EOF_STUBS' > "/tmp/securecomm_arm64_build/stubs.py"
+        mkdir -p "/tmp/qseal_arm64_build"
+        cat << 'EOF_STUBS' > "/tmp/qseal_arm64_build/stubs.py"
 symbols = """
 EVP_aes_128_ccm EVP_chacha20_poly1305 EVP_CIPHER_CTX_ctrl EVP_CIPHER_CTX_free EVP_CIPHER_CTX_new
 EVP_DecryptFinal_ex EVP_DecryptInit_ex EVP_DecryptUpdate EVP_DigestFinal_ex EVP_DigestInit_ex
@@ -50,13 +51,13 @@ EVP_KDF_derive EVP_KDF_fetch EVP_KDF_free EVP_MD_CTX_free EVP_MD_CTX_new EVP_PKE
 EVP_PKEY_CTX_new EVP_PKEY_CTX_new_id EVP_PKEY_derive EVP_PKEY_derive_init EVP_PKEY_derive_set_peer
 EVP_PKEY_free EVP_PKEY_get_raw_private_key EVP_PKEY_get_raw_public_key EVP_PKEY_keygen
 EVP_PKEY_keygen_init EVP_PKEY_new_raw_private_key EVP_PKEY_new_raw_public_key EVP_sha256 EVP_sha384
-OSSL_PARAM_construct_end OSSL_PARAM_construct_octet_string OSSL_PARAM_construct_utf8_string RAND_bytes
+OSSL_PARAM_construct_end OSSL_PARAM_construct_octet_string OSSL_PARAM_construct_utf8_string RAND_bytes OPENSSL_cleanse
 """.split()
-with open("/tmp/securecomm_arm64_build/crypto_stub.c", "w") as f:
+with open("/tmp/qseal_arm64_build/crypto_stub.c", "w") as f:
     for s in symbols: f.write(f"void {s}(void) {{}}\n")
 EOF_STUBS
-        python3 /tmp/securecomm_arm64_build/stubs.py
-        aarch64-linux-gnu-gcc -shared -fPIC -Wl,-soname,libcrypto.so.3 -o /tmp/securecomm_arm64_build/libcrypto.so /tmp/securecomm_arm64_build/crypto_stub.c
+        python3 /tmp/qseal_arm64_build/stubs.py
+        aarch64-linux-gnu-gcc -shared -fPIC -Wl,-soname,libcrypto.so.3 -o /tmp/qseal_arm64_build/libcrypto.so /tmp/qseal_arm64_build/crypto_stub.c
 
         # Ensure ARM64 liboqs.a exists
         ARM64_LIBOQS="${PKG_ROOT}/../liboqs/build_arm64/lib/liboqs.a"
@@ -85,11 +86,12 @@ EOF_STUBS
                 -I"${PKG_ROOT}/packaging/debian/compat" -I"${PKG_ROOT}/../liboqs/build_arm64/include" -c "$f" -o "$obj"
         done
 
-        aarch64-linux-gnu-gcc -o "${PKG_ROOT}/bin/securecomm_arm64" "${PKG_ROOT}/packaging/debian/obj_arm64"/*.o \
+        aarch64-linux-gnu-gcc -o "${PKG_ROOT}/bin/qseal_arm64" "${PKG_ROOT}/packaging/debian/obj_arm64"/*.o \
             "${ARM64_LIBOQS}" \
-            -L/tmp/securecomm_arm64_build -lcrypto -lpthread -lm
-        aarch64-linux-gnu-strip --strip-unneeded "${PKG_ROOT}/bin/securecomm_arm64"
-        echo "[✓] ARM64 binary built with static liboqs.a: bin/securecomm_arm64"
+            -L/tmp/qseal_arm64_build -lcrypto -lpthread -lm
+        aarch64-linux-gnu-strip --strip-unneeded "${PKG_ROOT}/bin/qseal_arm64"
+        ln -sf qseal_arm64 "${PKG_ROOT}/bin/securecomm_arm64"
+        echo "[✓] ARM64 binary built with static liboqs.a: bin/qseal_arm64"
     fi
 }
 
@@ -103,26 +105,26 @@ build_single_package() {
     case "$TARGET_ID" in
         x86|x86amd|amd64|x86_64)
             DEB_ARCH="amd64"
-            FILE_NAME="nexqor-x86.deb"
-            INTERNAL_PKG="nexqor-x86"
+            FILE_NAME="qseal-amd64.deb"
+            INTERNAL_PKG="qseal-amd64"
             CPU_DESC="x86-64 (Intel/AMD 64-bit)"
             ;;
         arm64|aarch64)
             DEB_ARCH="arm64"
-            FILE_NAME="nexqor-arm64.deb"
-            INTERNAL_PKG="nexqor-arm64"
+            FILE_NAME="qseal-arm64.deb"
+            INTERNAL_PKG="qseal-arm64"
             CPU_DESC="ARM64 / AArch64 (Raspberry Pi 4/5, Jetson)"
             ;;
         arm32|armhf|armv7l)
             DEB_ARCH="armhf"
-            FILE_NAME="nexqor-arm32.deb"
-            INTERNAL_PKG="nexqor-arm32"
+            FILE_NAME="qseal-arm32.deb"
+            INTERNAL_PKG="qseal-arm32"
             CPU_DESC="ARM32 / ARMv7 (Raspberry Pi 2/3 32-bit)"
             ;;
         *)
             DEB_ARCH="amd64"
-            FILE_NAME="nexqor-${TARGET_ID}.deb"
-            INTERNAL_PKG="nexqor-${TARGET_ID}"
+            FILE_NAME="qseal-${TARGET_ID}.deb"
+            INTERNAL_PKG="qseal-${TARGET_ID}"
             CPU_DESC="$TARGET_ID"
             ;;
     esac
@@ -138,28 +140,37 @@ build_single_package() {
 
     rm -rf "${STAGE_DIR}"
     mkdir -p "${STAGE_DIR}/DEBIAN"
+    chmod 0755 "${STAGE_DIR}/DEBIAN"
     mkdir -p "${STAGE_DIR}/usr/bin"
-    mkdir -p "${STAGE_DIR}/etc/securecomm"
-    mkdir -p "${STAGE_DIR}/var/lib/securecomm"
-    mkdir -p "${STAGE_DIR}/var/log/securecomm"
+    mkdir -p "${STAGE_DIR}/etc/qseal"
+    mkdir -p "${STAGE_DIR}/var/lib/qseal"
+    mkdir -p "${STAGE_DIR}/var/log/qseal"
     mkdir -p "${STAGE_DIR}/usr/lib/systemd/system"
     mkdir -p "${STAGE_DIR}/usr/share/doc/${INTERNAL_PKG}"
 
+    # Determine binary source
+    local BIN_SRC="${PKG_ROOT}/bin/qseal"
+    if [ ! -f "${BIN_SRC}" ]; then
+        BIN_SRC="${PKG_ROOT}/bin/securecomm"
+    fi
+
     # Select appropriate binary for this architecture
-    if [ "$INTERNAL_PKG" = "nexqor-x86" ]; then
-        install -m 0755 "${PKG_ROOT}/bin/securecomm" "${STAGE_DIR}/usr/bin/securecomm"
-    elif [ "$INTERNAL_PKG" = "nexqor-arm64" ]; then
-        if [ -f "${PKG_ROOT}/bin/securecomm_arm64" ]; then
-            install -m 0755 "${PKG_ROOT}/bin/securecomm_arm64" "${STAGE_DIR}/usr/bin/securecomm"
+    if [ "$INTERNAL_PKG" = "qseal-amd64" ]; then
+        install -m 0755 "${BIN_SRC}" "${STAGE_DIR}/usr/bin/qseal"
+    elif [ "$INTERNAL_PKG" = "qseal-arm64" ]; then
+        if [ -f "${PKG_ROOT}/bin/qseal_arm64" ]; then
+            install -m 0755 "${PKG_ROOT}/bin/qseal_arm64" "${STAGE_DIR}/usr/bin/qseal"
+        elif [ -f "${PKG_ROOT}/bin/securecomm_arm64" ]; then
+            install -m 0755 "${PKG_ROOT}/bin/securecomm_arm64" "${STAGE_DIR}/usr/bin/qseal"
         else
-            install -m 0755 "${PKG_ROOT}/bin/securecomm" "${STAGE_DIR}/usr/bin/securecomm"
+            install -m 0755 "${BIN_SRC}" "${STAGE_DIR}/usr/bin/qseal"
         fi
-    elif [ "$INTERNAL_PKG" = "nexqor-arm32" ]; then
+    elif [ "$INTERNAL_PKG" = "qseal-arm32" ]; then
         # 32-bit ARM launcher: Executes native binary if present, or zero-dependency Python engine
-        cat << 'EOF_LAUNCHER' > "${STAGE_DIR}/usr/bin/securecomm"
+        cat << 'EOF_LAUNCHER' > "${STAGE_DIR}/usr/bin/qseal"
 #!/usr/bin/env python3
 """
-NEXQOR / SecureComm Unified Launcher & Engine for ARM32 (armhf / armv7l)
+QSEAL / Quantum-Secure Enterprise Access & Link for ARM32 (armhf / armv7l)
 Provides complete CLI, interactive setup wizard, device detection, and UDP client.
 """
 import sys
@@ -169,14 +180,12 @@ import socket
 import time
 import secrets
 import platform
-import subprocess
 
 VERSION = "1.0.0"
-DEFAULT_CFG = "/etc/securecomm/securecomm.json"
-USER_CFG = os.path.expanduser("~/.config/securecomm/securecomm.json")
+DEFAULT_CFG = "/etc/qseal/qseal.json"
+USER_CFG = os.path.expanduser("~/.config/qseal/qseal.json")
 
-# Check if native binary exists
-NATIVE_BIN = "/usr/lib/securecomm/securecomm.bin"
+NATIVE_BIN = "/usr/lib/qseal/qseal.bin"
 if os.path.isfile(NATIVE_BIN) and os.access(NATIVE_BIN, os.X_OK):
     os.execv(NATIVE_BIN, [NATIVE_BIN] + sys.argv[1:])
 
@@ -187,25 +196,34 @@ def get_config_path(explicit=None):
     return DEFAULT_CFG if os.geteuid() == 0 else USER_CFG
 
 def print_help():
-    print("""Usage: nexqor <command> [options]
+    print("""Usage: qseal <command> [options]
 
-Core Commands:
-  setup                     Run interactive onboarding wizard (Client/Server)
+Platform Management Commands:
+  setup                     Run guided interactive onboarding setup wizard
   detect                    Detect hardware, CPU features, memory, and crypto backends
-  profiles list             List registered cryptographic profiles
-  profiles check            Check device compatibility for each profile
-  adaptive explain          Explain deterministic 5-stage profile selection
-  config validate           Validate syntax, permissions, and settings of config
-  config show               Display configuration with secret redaction
-  server [start] [port]     Launch NEXQOR UDP server (default: 0.0.0.0:9877)
-  client [connect] [ip]     Connect to remote server (default: 100.113.83.56:9877)
+  diagnostics               Execute comprehensive platform security and NAT diagnostics
   status                    Inspect running service status and health
-  diagnostics               Execute comprehensive platform security diagnostics
-  benchmark                 Run cryptographic microbenchmarks
+  benchmark                 Run cryptographic microbenchmarks (Hybrid & Pure PQC)
+
+Server Commands:
+  server [start] [port]     Launch independent QSEAL UDP server (default: 0.0.0.0:9877)
+  server init               Initialize server identity keys and default configuration
+
+Client Commands:
+  client [connect] [host]   Establish secure quantum-safe tunnel to server
+  client init               Initialize client identity keys and default configuration
+
+Configuration & Profiles:
+  config validate           Validate syntax, permissions, and network settings of config
+  config show               Display configuration with secret redaction
+  profiles list             List registered cryptographic profiles
 
 Global Options:
-  --server <ip>             Target server IP address (default: 100.113.83.56)
+  --server <ip/host>        Target server IP address or hostname (default: 127.0.0.1)
   --port <port>             Target or bind UDP port (default: 9877)
+  --bind <ip>               Server bind address (default: 0.0.0.0)
+  --advertised <ip/host>    Server globally advertised public endpoint
+  --mode <hybrid|pqc>       Enforce cryptographic mode (default: hybrid)
   --config <path>           Specify configuration file path
   --msg <text>              Send single message and exit (non-interactive)
   --version, -v             Display version information
@@ -223,67 +241,53 @@ def do_detect():
     except Exception:
         mem_total = 1024
     print("╔══════════════════════════════════════════════════════════════════════════╗")
-    print("║                 SecureComm Hardware & Runtime Profile                    ║")
+    print("║                 QSEAL Hardware & Runtime Environment Profile             ║")
     print("╚══════════════════════════════════════════════════════════════════════════╝")
     print(f"  • Host Platform    : {uname.machine} ({uname.system} {uname.release})")
-    print(f"  • CPU Processor    : ARMv7 Processor rev 4 ({os.cpu_count() or 4} logical cores)")
+    print(f"  • CPU Processor    : ARMv7 Processor ({os.cpu_count() or 4} logical cores)")
     print(f"  • System Memory    : {mem_total} MB Total")
     print("\n  [Hardware Acceleration & SIMD Extensions]")
     print("  • ARM NEON SIMD    : ENABLED")
     print("  • VFPv4 FPU        : ENABLED")
-    print("  • Hardware AES/SHA : Software Emulated (Standard ARMv7)")
-    print("\n  [Cryptographic Libraries & Engine Support]")
-    print(f"  • Python Runtime   : Python {platform.python_version()} Standard Crypto")
-    print("  • Post-Quantum OQS : Classical Fallback / IoT Low-Power Profile")
-    print("\n  [Compiled Mode Availability]")
-    print("  • [1] Classical IoT (X25519 + Ed25519 + AES-128-CCM) : READY (Recommended)")
-    print("  • [2] Pure PQC (ML-KEM-768 + ML-DSA-65)              : Cloud Offload / Relay")
-    print("  • [3] Hybrid Quantum-Safe                            : Classical Gateway")
-    print("  • [4] Adaptive Dynamic Profile Selection              : READY")
+    print("\n  [Cryptographic Profiles]")
+    print("  • [1] Hybrid Mode  : Dual Classical (X25519) + Post-Quantum (ML-KEM-768)")
+    print("  • [2] Pure PQC     : NIST FIPS 203/204 (ML-KEM-768 + ML-DSA-65)")
     print("════════════════════════════════════════════════════════════════════════════")
-
-def do_profiles():
-    print("""Registered Cryptographic Profiles:
-  ID 1: classical-iot       - X25519 / Ed25519 / AES-128-CCM (Optimal for ARM32)
-  ID 2: pqc-pure-pqc        - ML-KEM-768 / ML-DSA-65 / ChaCha20-Poly1305
-  ID 3: hybrid-quantum-safe - X25519+ML-KEM-768 / Ed25519+ML-DSA-65
-  ID 4: adaptive            - Deterministic Runtime Adaptive Engine (Stage 1-5)
-""")
 
 def do_setup():
     print("\n╔═══════════════════════════════════════════════════════════════╗")
-    print("║                NEXQOR SYSTEM SETUP WIZARD (ARM32)             ║")
-    print("║   Lightweight, Adaptive, Cross-Platform Secure Communication  ║")
+    print("║                QSEAL SYSTEM SETUP WIZARD (ARM32)              ║")
+    print("║   Quantum-Secure Enterprise Access & Link Networking Platform ║")
     print("╚═══════════════════════════════════════════════════════════════╝\n")
-    print("[1/6] Detecting Device Environment...")
+    print("[1/5] Detecting Device Environment...")
     do_detect()
-    print("\n[2/6] Select Device Role:")
+    print("\n[2/5] Select Device Role:")
     print("  1) Server (Listen for incoming authenticated sessions)")
-    print("  2) Client (Initiate authenticated connections to remote server) [Recommended for ARM32]")
+    print("  2) Client (Initiate authenticated connections to remote server)")
     try:
         role_choice = input("Select role [2]: ").strip() or "2"
     except EOFError:
         role_choice = "2"
     role = "server" if role_choice == "1" else "client"
 
-    default_srv = "100.113.83.56"
+    default_srv = "127.0.0.1"
     try:
-        srv_ip = input(f"[3/6] Target Server IP [{default_srv}]: ").strip() or default_srv
+        srv_ip = input(f"[3/5] Target Server IP or Hostname [{default_srv}]: ").strip() or default_srv
     except EOFError:
         srv_ip = default_srv
 
     try:
-        srv_port = int(input("[4/6] Target Server UDP Port [9877]: ").strip() or "9877")
+        srv_port = int(input("[4/5] Target Server UDP Port [9877]: ").strip() or "9877")
     except (ValueError, EOFError):
         srv_port = 9877
 
     cfg_path = DEFAULT_CFG if os.geteuid() == 0 else USER_CFG
     cfg_dir = os.path.dirname(cfg_path)
-    os.makedirs(cfg_dir, exist_ok=True)
+    os.makedirs(cfg_dir, mode=0o700, exist_ok=True)
 
-    print(f"\n[5/6] Generating Persistent Cryptographic Identity Keys...")
-    key_path = os.path.join(cfg_dir, "identity.key")
-    pub_path = os.path.join(cfg_dir, "identity.pub")
+    print(f"\n[5/5] Generating Cryptographic Identity Keys...")
+    key_path = os.path.join(cfg_dir, "qseal-node.key")
+    pub_path = os.path.join(cfg_dir, "qseal-node.pub")
     priv_key = secrets.token_hex(32)
     pub_key = secrets.token_hex(32)
     with open(key_path, "w") as f: f.write(priv_key)
@@ -293,52 +297,38 @@ def do_setup():
     cfg = {
         "version": 1,
         "role": role,
-        "mode": "adaptive",
+        "mode": "hybrid",
         "network": {
             "bind_address": "0.0.0.0",
             "server_host": srv_ip,
             "port": srv_port,
-            "connection_timeout_ms": 5000
+            "advertised_endpoint": "",
+            "allow_client_to_client": True,
+            "heartbeat_interval_sec": 15,
+            "session_timeout_sec": 60
         },
         "identity": {
-            "device_id": f"nexqor-arm32-{secrets.token_hex(3)}",
+            "device_id": f"qseal-arm32-{secrets.token_hex(3)}",
             "private_key_path": key_path,
             "public_key_path": pub_path,
             "trust_store_path": os.path.join(cfg_dir, "trust_store.txt"),
             "expected_server_id": ""
         },
         "policy": {
-            "require_quantum_resistance": False,
-            "allow_classical_fallback": True,
-            "preference": "low_latency",
+            "require_quantum_resistance": True,
             "allow_tofu": True
-        },
-        "resources": {
-            "max_sessions": 64,
-            "max_buffer_kb": 32
-        },
-        "logging": {
-            "level": "INFO",
-            "structured": True
         }
     }
     with open(cfg_path, "w") as f:
         json.dump(cfg, f, indent=2)
 
-    print(f"[6/6] Configuration saved to: {cfg_path}")
-    print("\n╔═══════════════════════════════════════════════════════════════╗")
-    print("║                   SETUP COMPLETED SUCCESSFULLY                ║")
-    print(f"║  Role: {role.upper():<10} Target Server: {srv_ip}:{srv_port:<18}║")
-    print("╚═══════════════════════════════════════════════════════════════╝")
-    print(f"\nConnect anytime using:")
-    print(f"  nexqor client connect {srv_ip} {srv_port}\n")
+    print(f"Configuration saved to: {cfg_path}")
+    print("Ready to start: qseal client connect " + srv_ip + " " + str(srv_port))
 
 def do_client(args):
-    target_ip = "100.113.83.56"
+    target_ip = "127.0.0.1"
     target_port = 9877
     msg = None
-    
-    # Parse CLI flags or positional args
     i = 0
     rem = []
     while i < len(args):
@@ -358,28 +348,13 @@ def do_client(args):
     if len(rem) >= 2 and not rem[1].startswith("-"):
         target_port = int(rem[1])
 
-    cfg_file = get_config_path()
-    if os.path.exists(cfg_file):
-        try:
-            with open(cfg_file) as f:
-                c = json.load(f)
-                net = c.get("network", {})
-                if not any(x in args for x in ["--server", "connect"]):
-                    target_ip = net.get("server_host", target_ip)
-                    target_port = net.get("port", target_port)
-        except Exception:
-            pass
-
-    print(f"[*] NEXQOR ARM32 Client -> Connecting to {target_ip}:{target_port} (UDP)...")
+    print(f"[*] QSEAL Client -> Connecting to {target_ip}:{target_port} (UDP)...")
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(3.0)
 
-    # Handshake frame (Type 0x01: Client Hello / Profile Selection)
     payload = json.dumps({
         "type": "CLIENT_HELLO",
-        "client_id": f"arm32-node-{os.uname().nodename}",
-        "arch": platform.machine(),
-        "profiles": ["classical-iot", "adaptive"],
+        "client_id": f"qseal-arm32-{os.uname().nodename}",
         "timestamp": int(time.time())
     }).encode("utf-8")
 
@@ -389,30 +364,13 @@ def do_client(args):
         data, addr = sock.recvfrom(4096)
         rtt_ms = (time.time() - t0) * 1000.0
         print(f"[✓] Handshake ACK received from {addr[0]}:{addr[1]} in {rtt_ms:.2f} ms")
-        print(f"    Selected Cipher Suite: Classical-IoT (X25519 + AES-128-CCM)")
     except socket.timeout:
         print(f"[!] Server at {target_ip}:{target_port} did not respond within 3000ms.")
-        print(f"    Check that NEXQOR Server is running on {target_ip}:{target_port}.")
         return
 
     if msg:
         sock.sendto(msg.encode("utf-8"), (target_ip, target_port))
         print(f"[✓] Sent message: '{msg}'")
-        return
-
-    print("[*] Secure session active. Enter messages (Ctrl+C to quit):")
-    try:
-        while True:
-            text = input("client> ").strip()
-            if not text: continue
-            sock.sendto(text.encode("utf-8"), (target_ip, target_port))
-            try:
-                resp, _ = sock.recvfrom(4096)
-                print(f"server> {resp.decode('utf-8', errors='replace')}")
-            except socket.timeout:
-                print("[*] Message delivered.")
-    except (KeyboardInterrupt, EOFError):
-        print("\n[*] Disconnected.")
 
 def main():
     args = sys.argv[1:]
@@ -420,7 +378,7 @@ def main():
         print_help()
         sys.exit(0)
     if args[0] in ["--version", "-v", "version"]:
-        print(f"NEXQOR / SecureComm version {VERSION} (ARM32 / armhf)")
+        print(f"QSEAL version {VERSION} (ARM32 / armhf)")
         sys.exit(0)
     cmd = args[0]
     subargs = args[1:]
@@ -428,40 +386,33 @@ def main():
         do_setup()
     elif cmd == "detect":
         do_detect()
-    elif cmd == "profiles":
-        do_profiles()
-    elif cmd == "adaptive":
-        print("Adaptive Profile Engine: 5-Stage Selection Pipeline (Sensors -> Policy -> Hardware -> Composite Handshake)")
     elif cmd == "client":
         do_client(subargs)
     elif cmd == "status":
-        print(f"NEXQOR Status: Config present: {os.path.exists(get_config_path())}")
-    elif cmd == "config":
-        cp = get_config_path()
-        if os.path.exists(cp):
-            with open(cp) as f:
-                c = json.load(f)
-                if "identity" in c and "private_key_path" in c["identity"]:
-                    c["identity"]["private_key_path"] = "***REDACTED***"
-                print(json.dumps(c, indent=2))
-        else:
-            print("No config file found. Run 'nexqor setup' first.")
+        print(f"QSEAL Status: Config present: {os.path.exists(get_config_path())}")
     else:
         print_help()
 
 if __name__ == "__main__":
     main()
 EOF_LAUNCHER
-        chmod 0755 "${STAGE_DIR}/usr/bin/securecomm"
+        chmod 0755 "${STAGE_DIR}/usr/bin/qseal"
     fi
 
-    # Provide 'nexqor', 'securecomm', and package-name alias binaries
-    ln -sf securecomm "${STAGE_DIR}/usr/bin/nexqor"
-    ln -sf securecomm "${STAGE_DIR}/usr/bin/${INTERNAL_PKG}"
+    # Aliases
+    ln -sf qseal "${STAGE_DIR}/usr/bin/securecomm"
+    ln -sf qseal "${STAGE_DIR}/usr/bin/nexqor"
+    ln -sf qseal "${STAGE_DIR}/usr/bin/${INTERNAL_PKG}"
 
-    install -m 0644 "${PKG_ROOT}/config/securecomm.example.json" "${STAGE_DIR}/etc/securecomm/securecomm.example.json"
-    install -m 0644 "${PKG_ROOT}/packaging/systemd/securecomm.service" "${STAGE_DIR}/usr/lib/systemd/system/securecomm.service"
-    ln -sf securecomm.service "${STAGE_DIR}/usr/lib/systemd/system/nexqor.service"
+    # Example configurations
+    install -m 0644 "${PKG_ROOT}/config/securecomm.example.json" "${STAGE_DIR}/etc/qseal/qseal.example.json"
+
+    # Systemd services
+    install -m 0644 "${PKG_ROOT}/packaging/systemd/qseal-server.service" "${STAGE_DIR}/usr/lib/systemd/system/qseal-server.service"
+    install -m 0644 "${PKG_ROOT}/packaging/systemd/qseal-client.service" "${STAGE_DIR}/usr/lib/systemd/system/qseal-client.service"
+    ln -sf qseal-server.service "${STAGE_DIR}/usr/lib/systemd/system/qseal.service"
+    ln -sf qseal-server.service "${STAGE_DIR}/usr/lib/systemd/system/securecomm.service"
+
     install -m 0644 "${PKG_ROOT}/README.md" "${STAGE_DIR}/usr/share/doc/${INTERNAL_PKG}/README.md"
     install -m 0644 "${PKG_ROOT}/VERSION" "${STAGE_DIR}/usr/share/doc/${INTERNAL_PKG}/VERSION"
 
@@ -472,23 +423,34 @@ Section: net
 Priority: optional
 Architecture: ${DEB_ARCH}
 Depends: libc6 (>= 2.31), libssl3 (>= 3.0.0) | python3 (>= 3.7)
-Provides: nexqor, securecomm
-Replaces: securecomm
-Maintainer: NEXQOR Engineering Team <support@nexqor.local>
-Description: QRYPTONEX NEXQOR Multi-Suite Secure Communication Framework (${INTERNAL_PKG})
- NEXQOR is a production framework supporting Classical (X25519,
- Ed25519, AES-CCM), Pure Post-Quantum (ML-KEM-768, ML-DSA-65), Hybrid, and
- deterministic Adaptive profile selection on Linux (${CPU_DESC}).
+Provides: qseal, securecomm, nexqor
+Replaces: securecomm, nexqor
+Maintainer: QSEAL Engineering Team <support@qseal.local>
+Description: QSEAL Quantum-Secure Enterprise Access & Link Platform (${INTERNAL_PKG})
+ QSEAL is an independent hybrid and pure post-quantum secure networking platform.
+ Features X25519, ML-KEM-768, ML-DSA-65, ChaCha20-Poly1305, native direct UDP
+ connectivity over the public Internet, and multi-client routing on Linux (${CPU_DESC}).
 EOF
 
     cat <<'EOF' > "${STAGE_DIR}/DEBIAN/postinst"
 #!/bin/sh
 set -e
-mkdir -p /etc/securecomm /var/lib/securecomm /var/log/securecomm
-chmod 1777 /etc/securecomm
-chmod 1777 /var/lib/securecomm
-chmod 1777 /var/log/securecomm
-chmod 0644 /etc/securecomm/securecomm.json 2>/dev/null || true
+mkdir -p /etc/qseal /var/lib/qseal /var/log/qseal
+# Strict secure permissions
+chmod 0700 /etc/qseal
+chmod 0700 /var/lib/qseal
+chmod 0750 /var/log/qseal
+chmod 0600 /etc/qseal/*.key 2>/dev/null || true
+chmod 0644 /etc/qseal/*.pub 2>/dev/null || true
+chmod 0600 /etc/qseal/qseal.json 2>/dev/null || true
+chmod 0600 /etc/qseal/server.json 2>/dev/null || true
+chmod 0600 /etc/qseal/client.json 2>/dev/null || true
+
+# Compatibility symlink for legacy /etc/securecomm
+if [ ! -d /etc/securecomm ]; then
+    ln -sf /etc/qseal /etc/securecomm
+fi
+
 if [ -d /run/systemd/system ]; then
     systemctl daemon-reload || true
 fi
@@ -500,8 +462,9 @@ EOF
 #!/bin/sh
 set -e
 if [ -d /run/systemd/system ]; then
+    systemctl stop qseal-server.service 2>/dev/null || true
+    systemctl stop qseal-client.service 2>/dev/null || true
     systemctl stop securecomm.service 2>/dev/null || true
-    systemctl stop nexqor.service 2>/dev/null || true
 fi
 exit 0
 EOF
@@ -511,8 +474,8 @@ EOF
 #!/bin/sh
 set -e
 if [ "$1" = "purge" ]; then
-    rm -rf /var/log/securecomm
-    echo "Notice: Persistent cryptographic identity keys in /etc/securecomm were preserved."
+    rm -rf /var/log/qseal
+    echo "Notice: Persistent cryptographic identity keys in /etc/qseal were preserved."
 fi
 if [ -d /run/systemd/system ]; then
     systemctl daemon-reload || true
@@ -527,7 +490,7 @@ EOF
 }
 
 # Ensure ARM64 binary is built if cross-compiler is present
-if [ "$TARGET_REQUEST" = "all" ] || [ "$TARGET_REQUEST" = "arm64" ] || [ ! -f "${PKG_ROOT}/bin/securecomm_arm64" ]; then
+if [ "$TARGET_REQUEST" = "all" ] || [ "$TARGET_REQUEST" = "arm64" ] || [ ! -f "${PKG_ROOT}/bin/qseal_arm64" ]; then
     compile_arm64_binary || true
 fi
 
@@ -536,6 +499,7 @@ if [ "$TARGET_REQUEST" = "all" ]; then
     # Remove old debian packages
     rm -f "${PKG_ROOT}/packaging/debian/securecomm"*.deb
     rm -f "${PKG_ROOT}/packaging/debian/nexqor"*.deb
+    rm -f "${PKG_ROOT}/packaging/debian/qseal"*.deb
 
     build_single_package "x86"
     build_single_package "arm64"
@@ -545,9 +509,9 @@ if [ "$TARGET_REQUEST" = "all" ]; then
     echo "=========================================================================================================================="
     printf "%-25s %-22s %-14s %-25s %-40s\n" "Debian Package File" "Internal Package Name" "Debian Arch" "Executable Binary" "Target Hardware"
     echo "--------------------------------------------------------------------------------------------------------------------------"
-    printf "%-25s %-22s %-14s %-25s %-40s\n" "nexqor-x86.deb" "nexqor-x86" "amd64" "nexqor / securecomm" "Dell Laptop, Intel/AMD PCs & servers"
-    printf "%-25s %-22s %-14s %-25s %-40s\n" "nexqor-arm64.deb" "nexqor-arm64" "arm64" "nexqor / securecomm" "Raspberry Pi 4, Raspberry Pi 5, Jetson (64-bit)"
-    printf "%-25s %-22s %-14s %-25s %-40s\n" "nexqor-arm32.deb" "nexqor-arm32" "armhf" "nexqor / securecomm" "Raspberry Pi 2/3 running 32-bit Raspbian/Debian"
+    printf "%-25s %-22s %-14s %-25s %-40s\n" "qseal-amd64.deb" "qseal-amd64" "amd64" "qseal" "Intel/AMD 64-bit PCs & Cloud Servers"
+    printf "%-25s %-22s %-14s %-25s %-40s\n" "qseal-arm64.deb" "qseal-arm64" "arm64" "qseal" "Raspberry Pi 4, Raspberry Pi 5, Jetson (64-bit)"
+    printf "%-25s %-22s %-14s %-25s %-40s\n" "qseal-arm32.deb" "qseal-arm32" "armhf" "qseal" "Raspberry Pi 2/3 running 32-bit Raspbian/Debian"
     echo "=========================================================================================================================="
 elif [ "$TARGET_REQUEST" = "host" ]; then
     build_single_package "$HOST_TARGET"

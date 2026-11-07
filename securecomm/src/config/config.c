@@ -35,31 +35,37 @@ void securecomm_config_init_default(securecomm_config_t *cfg) {
     
     cfg->version = 1;
     cfg->role = SECURECOMM_ROLE_SERVER;
-    cfg->mode = SECURECOMM_MODE_ADAPTIVE;
-    strncpy(cfg->profile_id, "profile-pqc-1", sizeof(cfg->profile_id) - 1);
+    cfg->mode = SECURECOMM_MODE_HYBRID;
+    strncpy(cfg->profile_id, "profile-hybrid-1", sizeof(cfg->profile_id) - 1);
     
     strncpy(cfg->bind_address, "0.0.0.0", sizeof(cfg->bind_address) - 1);
-    strncpy(cfg->server_address, "100.113.83.56", sizeof(cfg->server_address) - 1);
-    strncpy(cfg->server_host, "100.113.83.56", sizeof(cfg->server_host) - 1);
+    strncpy(cfg->advertised_endpoint, "", sizeof(cfg->advertised_endpoint) - 1);
+    strncpy(cfg->server_address, "127.0.0.1", sizeof(cfg->server_address) - 1);
+    strncpy(cfg->server_host, "127.0.0.1", sizeof(cfg->server_host) - 1);
     cfg->port = 9877;
     cfg->connect_timeout_ms = 5000;
+    cfg->connection_timeout_ms = 5000;
     cfg->reconnect_attempts = 5;
+    cfg->heartbeat_interval_sec = 15;
+    cfg->session_timeout_sec = 60;
+    cfg->allow_client_to_client = true;
+    cfg->server_count = 0;
     
-    strncpy(cfg->device_id, "node-default", sizeof(cfg->device_id) - 1);
-    if (access("/etc/securecomm", W_OK) == 0 || getuid() == 0) {
-        strncpy(cfg->private_key_path, "/etc/securecomm/identity.key", sizeof(cfg->private_key_path) - 1);
-        strncpy(cfg->public_key_path, "/etc/securecomm/identity.pub", sizeof(cfg->public_key_path) - 1);
-        strncpy(cfg->trust_store_path, "/etc/securecomm/trust_store.txt", sizeof(cfg->trust_store_path) - 1);
+    strncpy(cfg->device_id, "qseal-node", sizeof(cfg->device_id) - 1);
+    if (access("/etc/qseal", W_OK) == 0 || getuid() == 0) {
+        strncpy(cfg->private_key_path, "/etc/qseal/identity.key", sizeof(cfg->private_key_path) - 1);
+        strncpy(cfg->public_key_path, "/etc/qseal/identity.pub", sizeof(cfg->public_key_path) - 1);
+        strncpy(cfg->trust_store_path, "/etc/qseal/trust_store.txt", sizeof(cfg->trust_store_path) - 1);
     } else {
         const char *home = getenv("HOME");
         if (home && strlen(home) > 0) {
-            snprintf(cfg->private_key_path, sizeof(cfg->private_key_path), "%s/.config/securecomm/identity.key", home);
-            snprintf(cfg->public_key_path, sizeof(cfg->public_key_path), "%s/.config/securecomm/identity.pub", home);
-            snprintf(cfg->trust_store_path, sizeof(cfg->trust_store_path), "%s/.config/securecomm/trust_store.txt", home);
+            snprintf(cfg->private_key_path, sizeof(cfg->private_key_path), "%s/.config/qseal/identity.key", home);
+            snprintf(cfg->public_key_path, sizeof(cfg->public_key_path), "%s/.config/qseal/identity.pub", home);
+            snprintf(cfg->trust_store_path, sizeof(cfg->trust_store_path), "%s/.config/qseal/trust_store.txt", home);
         } else {
-            strncpy(cfg->private_key_path, "/tmp/securecomm_identity.key", sizeof(cfg->private_key_path) - 1);
-            strncpy(cfg->public_key_path, "/tmp/securecomm_identity.pub", sizeof(cfg->public_key_path) - 1);
-            strncpy(cfg->trust_store_path, "/tmp/securecomm_trust_store.txt", sizeof(cfg->trust_store_path) - 1);
+            strncpy(cfg->private_key_path, "/tmp/qseal_identity.key", sizeof(cfg->private_key_path) - 1);
+            strncpy(cfg->public_key_path, "/tmp/qseal_identity.pub", sizeof(cfg->public_key_path) - 1);
+            strncpy(cfg->trust_store_path, "/tmp/qseal_trust_store.txt", sizeof(cfg->trust_store_path) - 1);
         }
     }
     cfg->require_client_auth = true;
@@ -78,19 +84,28 @@ void securecomm_config_init_default(securecomm_config_t *cfg) {
 }
 
 const char *securecomm_config_find_active_path(void) {
-    if (access(SECURECOMM_DEFAULT_CONFIG, R_OK) == 0) {
-        return SECURECOMM_DEFAULT_CONFIG;
-    }
+    if (access("/etc/qseal/server.json", R_OK) == 0) return "/etc/qseal/server.json";
+    if (access("/etc/qseal/client.json", R_OK) == 0) return "/etc/qseal/client.json";
+    if (access("/etc/qseal/qseal.json", R_OK) == 0) return "/etc/qseal/qseal.json";
+    
     const char *home = getenv("HOME");
     if (home) {
         static char user_cfg[SECURECOMM_MAX_PATH_LEN];
-        snprintf(user_cfg, sizeof(user_cfg), "%s/.config/securecomm/securecomm.json", home);
+        snprintf(user_cfg, sizeof(user_cfg), "%s/.config/qseal/server.json", home);
+        if (access(user_cfg, R_OK) == 0) return user_cfg;
+        snprintf(user_cfg, sizeof(user_cfg), "%s/.config/qseal/client.json", home);
+        if (access(user_cfg, R_OK) == 0) return user_cfg;
+        snprintf(user_cfg, sizeof(user_cfg), "%s/.config/qseal/qseal.json", home);
         if (access(user_cfg, R_OK) == 0) return user_cfg;
     }
-    if (access(SECURECOMM_LOCAL_CONFIG, R_OK) == 0) {
-        return SECURECOMM_LOCAL_CONFIG;
-    }
-    return SECURECOMM_DEFAULT_CONFIG;
+    
+    if (access("config/qseal.json", R_OK) == 0) return "config/qseal.json";
+    if (access("config/server.json", R_OK) == 0) return "config/server.json";
+    if (access("config/client.json", R_OK) == 0) return "config/client.json";
+    if (access(SECURECOMM_LEGACY_CONFIG, R_OK) == 0) return SECURECOMM_LEGACY_CONFIG;
+    if (access(SECURECOMM_LOCAL_CONFIG, R_OK) == 0) return SECURECOMM_LOCAL_CONFIG;
+    
+    return "/etc/qseal/qseal.json";
 }
 
 int securecomm_config_load(securecomm_config_t *cfg, const char *path) {
@@ -145,6 +160,9 @@ int securecomm_config_load(securecomm_config_t *cfg, const char *path) {
         const char *bind_ip = json_get_string(json_object_get(net, "bind_address"), NULL);
         if (bind_ip) strncpy(cfg->bind_address, bind_ip, sizeof(cfg->bind_address) - 1);
         
+        const char *adv = json_get_string(json_object_get(net, "advertised_endpoint"), NULL);
+        if (adv) strncpy(cfg->advertised_endpoint, adv, sizeof(cfg->advertised_endpoint) - 1);
+
         const char *srv_ip = json_get_string(json_object_get(net, "server_address"), NULL);
         if (!srv_ip) srv_ip = json_get_string(json_object_get(net, "server_host"), NULL);
         if (srv_ip) {
@@ -154,7 +172,11 @@ int securecomm_config_load(securecomm_config_t *cfg, const char *path) {
         
         cfg->port = (uint16_t)json_get_int(json_object_get(net, "port"), cfg->port);
         cfg->connect_timeout_ms = (uint32_t)json_get_int(json_object_get(net, "connect_timeout_ms"), 5000);
+        cfg->connection_timeout_ms = cfg->connect_timeout_ms;
         cfg->reconnect_attempts = (uint32_t)json_get_int(json_object_get(net, "reconnect_attempts"), 5);
+        cfg->heartbeat_interval_sec = (uint32_t)json_get_int(json_object_get(net, "heartbeat_interval_sec"), 15);
+        cfg->session_timeout_sec = (uint32_t)json_get_int(json_object_get(net, "session_timeout_sec"), 60);
+        cfg->allow_client_to_client = json_get_bool(json_object_get(net, "allow_client_to_client"), true);
     }
     
     /* Identity */
@@ -227,11 +249,15 @@ int securecomm_config_save(const securecomm_config_t *cfg, const char *path) {
     json_value_t *net = json_create_object();
     const char *srv = strlen(cfg->server_address) > 0 ? cfg->server_address : cfg->server_host;
     json_object_set(net, "bind_address", json_create_string(cfg->bind_address));
+    json_object_set(net, "advertised_endpoint", json_create_string(cfg->advertised_endpoint));
     json_object_set(net, "server_address", json_create_string(srv));
     json_object_set(net, "server_host", json_create_string(srv));
     json_object_set(net, "port", json_create_number(cfg->port));
     json_object_set(net, "connect_timeout_ms", json_create_number(cfg->connect_timeout_ms));
     json_object_set(net, "reconnect_attempts", json_create_number(cfg->reconnect_attempts));
+    json_object_set(net, "heartbeat_interval_sec", json_create_number(cfg->heartbeat_interval_sec));
+    json_object_set(net, "session_timeout_sec", json_create_number(cfg->session_timeout_sec));
+    json_object_set(net, "allow_client_to_client", json_create_bool(cfg->allow_client_to_client));
     json_object_set(root, "network", net);
     
     json_value_t *id = json_create_object();
@@ -368,7 +394,7 @@ void securecomm_config_show(const securecomm_config_t *cfg, FILE *out, bool reda
     if (!cfg || !out) return;
     
     fprintf(out, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-    fprintf(out, "  SecureComm Configuration Summary\n");
+    fprintf(out, "  QSEAL Quantum-Secure Networking Configuration Summary\n");
     fprintf(out, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     fprintf(out, "  • Schema Version   : %u\n", cfg->version);
     fprintf(out, "  • Device Role      : %s\n", securecomm_role_to_string(cfg->role));
@@ -377,11 +403,14 @@ void securecomm_config_show(const securecomm_config_t *cfg, FILE *out, bool reda
     fprintf(out, "  • Device Identifier: %s\n", cfg->device_id);
     
     if (cfg->role == SECURECOMM_ROLE_SERVER) {
-        fprintf(out, "  • Bind Address     : %s:%u\n", cfg->bind_address, cfg->port);
+        fprintf(out, "  • Local Bind IP    : %s:%u\n", cfg->bind_address, cfg->port);
+        fprintf(out, "  • Advertised Pub EP: %s\n", strlen(cfg->advertised_endpoint) ? cfg->advertised_endpoint : "(Using Direct Local Interface IP)");
         fprintf(out, "  • Max Sessions     : %u\n", cfg->max_concurrent_sessions);
+        fprintf(out, "  • Client Routing   : %s\n", cfg->allow_client_to_client ? "ENABLED (Peer-to-Peer messaging)" : "DISABLED (Isolated)");
     } else {
         fprintf(out, "  • Server Target    : %s:%u\n", cfg->server_address, cfg->port);
         fprintf(out, "  • Timeout / Retry  : %u ms / %u attempts\n", cfg->connect_timeout_ms, cfg->reconnect_attempts);
+        fprintf(out, "  • Heartbeat Every  : %u seconds\n", cfg->heartbeat_interval_sec);
     }
     
     fprintf(out, "\n  [Identity & Cryptography]\n");

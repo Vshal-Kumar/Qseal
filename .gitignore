@@ -23,11 +23,17 @@ benchpqc
 
 # Test and example binaries (keep source files)
 **/tests/test_*
+**/tests/**/test_*
 !**/tests/test_*.c
+!**/tests/**/*.c
 **/tests/test_suite
 !**/tests/test_suite.c
 **/examples/hybrid_client
 **/examples/hybrid_server
+
+# Debian packages
+*.deb
+securecomm/packaging/debian/*.deb
 
 # Object and library files
 *.o

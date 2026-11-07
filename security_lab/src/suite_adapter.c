@@ -45,7 +45,7 @@ typedef struct __attribute__((packed)) {
 
 suite_type_t suite_adapter_parse_name(const char *name_str) {
     if (!name_str) return SUITE_TYPE_UNKNOWN;
-    if (strcasecmp(name_str, "classical") == 0) return SUITE_TYPE_CLASSICAL;
+    if (strcasecmp(name_str, "qseal") == 0 || strcasecmp(name_str, "classical") == 0) return SUITE_TYPE_CLASSICAL;
     if (strcasecmp(name_str, "hybrid") == 0) return SUITE_TYPE_HYBRID;
     if (strcasecmp(name_str, "pqc") == 0 || strcasecmp(name_str, "post-quantum") == 0) return SUITE_TYPE_PQC;
     return SUITE_TYPE_UNKNOWN;
@@ -53,7 +53,7 @@ suite_type_t suite_adapter_parse_name(const char *name_str) {
 
 const char *suite_adapter_name(suite_type_t suite) {
     switch (suite) {
-        case SUITE_TYPE_CLASSICAL: return "classical";
+        case SUITE_TYPE_CLASSICAL: return "qseal";
         case SUITE_TYPE_HYBRID:    return "hybrid";
         case SUITE_TYPE_PQC:       return "pqc";
         default:                   return "unknown";
@@ -85,15 +85,15 @@ int suite_adapter_init(suite_adapter_t *adapter, suite_type_t suite,
 
     switch (suite) {
         case SUITE_TYPE_CLASSICAL:
-            strncpy(adapter->name, "Classical IoT Cryptography Suite", sizeof(adapter->name) - 1);
-            strncpy(adapter->description, "X25519 ECDH + Ed25519 + AES-128-CCM + SHA-256 + HKDF", sizeof(adapter->description) - 1);
-            strncpy(adapter->crypto_stack, "Classical (Pre-Quantum)", sizeof(adapter->crypto_stack) - 1);
-            adapter->target_port = override_port ? override_port : PORT_CLASSICAL;
-            snprintf(adapter->server_dir, sizeof(adapter->server_dir), "%s/classical", cwd);
-            snprintf(adapter->server_bin, sizeof(adapter->server_bin), "%s/classical/server", cwd);
-            snprintf(adapter->client_bin, sizeof(adapter->client_bin), "%s/classical/client", cwd);
-            strncpy(adapter->ipc_rx_path, "/tmp/classical_rx.sock", sizeof(adapter->ipc_rx_path) - 1);
-            strncpy(adapter->ipc_tx_path, "/tmp/classical_tx.sock", sizeof(adapter->ipc_tx_path) - 1);
+            strncpy(adapter->name, "QSEAL Core Production Engine", sizeof(adapter->name) - 1);
+            strncpy(adapter->description, "QSEAL Independent Secure Networking Engine (securecomm/bin/qseal)", sizeof(adapter->description) - 1);
+            strncpy(adapter->crypto_stack, "QSEAL Adaptive / Hybrid / Pure PQC", sizeof(adapter->crypto_stack) - 1);
+            adapter->target_port = override_port ? override_port : 9876;
+            snprintf(adapter->server_dir, sizeof(adapter->server_dir), "%s/securecomm", cwd);
+            snprintf(adapter->server_bin, sizeof(adapter->server_bin), "%s/securecomm/bin/qseal", cwd);
+            snprintf(adapter->client_bin, sizeof(adapter->client_bin), "%s/securecomm/bin/qseal", cwd);
+            strncpy(adapter->ipc_rx_path, "/tmp/qseal_rx.sock", sizeof(adapter->ipc_rx_path) - 1);
+            strncpy(adapter->ipc_tx_path, "/tmp/qseal_tx.sock", sizeof(adapter->ipc_tx_path) - 1);
             break;
 
         case SUITE_TYPE_HYBRID:

@@ -15,13 +15,23 @@
 extern "C" {
 #endif
 
-#define SECURECOMM_PRODUCT_NAME     "SecureComm"
+#define QSEAL_PRODUCT_NAME          "QSEAL"
+#define QSEAL_FULL_NAME             "Quantum-Secure Enterprise Access & Link"
+#define QSEAL_VERSION_STRING        "1.0.0"
+#define QSEAL_DEFAULT_SERVER_CONFIG "/etc/qseal/server.json"
+#define QSEAL_DEFAULT_CLIENT_CONFIG "/etc/qseal/client.json"
+#define QSEAL_DEFAULT_CONFIG        "/etc/qseal/qseal.json"
+#define QSEAL_DEFAULT_VAR_DIR       "/var/lib/qseal"
+#define QSEAL_DEFAULT_LOG_DIR       "/var/log/qseal"
+
+#define SECURECOMM_PRODUCT_NAME     "QSEAL"
 #define SECURECOMM_VERSION_STRING   "1.0.0"
-#define SECURECOMM_DEFAULT_CONFIG   "/etc/securecomm/securecomm.json"
-#define SECURECOMM_LOCAL_CONFIG     "config/securecomm.json"
-#define SECURECOMM_DEFAULT_VAR_DIR  "/var/lib/securecomm"
+#define SECURECOMM_DEFAULT_CONFIG   "/etc/qseal/qseal.json"
+#define SECURECOMM_LEGACY_CONFIG    "/etc/securecomm/securecomm.json"
+#define SECURECOMM_LOCAL_CONFIG     "config/qseal.json"
+#define SECURECOMM_DEFAULT_VAR_DIR  "/var/lib/qseal"
 #define SECURECOMM_LOCAL_VAR_DIR    "var"
-#define SECURECOMM_DEFAULT_LOG_DIR  "/var/log/securecomm"
+#define SECURECOMM_DEFAULT_LOG_DIR  "/var/log/qseal"
 #define SECURECOMM_LOCAL_LOG_DIR    "logs"
 
 /* Operating Modes */
@@ -33,6 +43,13 @@ typedef enum {
     SECURECOMM_MODE_ADAPTIVE  = 4
 } securecomm_mode_t;
 
+typedef securecomm_mode_t qseal_mode_t;
+#define QSEAL_MODE_UNKNOWN   SECURECOMM_MODE_UNKNOWN
+#define QSEAL_MODE_CLASSICAL SECURECOMM_MODE_CLASSICAL
+#define QSEAL_MODE_PQC       SECURECOMM_MODE_PQC
+#define QSEAL_MODE_HYBRID    SECURECOMM_MODE_HYBRID
+#define QSEAL_MODE_ADAPTIVE  SECURECOMM_MODE_ADAPTIVE
+
 /* Device Roles */
 typedef enum {
     SECURECOMM_ROLE_UNKNOWN = 0,
@@ -40,9 +57,18 @@ typedef enum {
     SECURECOMM_ROLE_CLIENT  = 2
 } securecomm_role_t;
 
+typedef securecomm_role_t qseal_role_t;
+#define QSEAL_ROLE_UNKNOWN SECURECOMM_ROLE_UNKNOWN
+#define QSEAL_ROLE_SERVER  SECURECOMM_ROLE_SERVER
+#define QSEAL_ROLE_CLIENT  SECURECOMM_ROLE_CLIENT
+
 /* Standard Ports & Defaults */
+#define QSEAL_DEFAULT_PORT                9877
+#define QSEAL_DEFAULT_BIND_IP             "0.0.0.0"
+#define QSEAL_DEFAULT_SERVER_HOST         "127.0.0.1"
+
 #define SECURECOMM_DEFAULT_PORT           9877
-#define SECURECOMM_DEFAULT_SERVER_HOST    "100.113.83.56"
+#define SECURECOMM_DEFAULT_SERVER_HOST    "127.0.0.1"
 #define SECURECOMM_DEFAULT_BIND_IP        "0.0.0.0"
 
 #define SECURECOMM_PORT_CLASSICAL 9877

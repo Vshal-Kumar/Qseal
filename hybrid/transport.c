@@ -466,7 +466,7 @@ int server_publish_endpoints(char *lan_ip, size_t lan_len,
         struct sockaddr_in *p = (struct sockaddr_in *)ifa->ifa_addr;
         inet_ntop(AF_INET, &p->sin_addr, host, sizeof(host));
 
-        if (strncmp(host, "100.", 4) == 0 || strstr(ifa->ifa_name, "tailscale") != NULL) {
+        if (strncmp(ifa->ifa_name, "tun", 3) == 0 || strncmp(ifa->ifa_name, "tap", 3) == 0) {
             strncpy(detected_vpn, host, sizeof(detected_vpn) - 1);
         } else if (strlen(detected_lan) == 0) {
             strncpy(detected_lan, host, sizeof(detected_lan) - 1);

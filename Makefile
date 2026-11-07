@@ -1,4 +1,4 @@
-# QRYPTONEX — Multi-Suite Global Makefile
+# QSEAL — Global Makefile
 # Top-level dispatcher with Automatic Hardware Architecture Detection
 #
 # Supported Targets:
@@ -61,26 +61,25 @@ else
   TARGET_DESC     := $(ARCH_DESC) [$(AUTO_MAKEFILE)]
 endif
 
-.PHONY: all classical hybrid pqc test test-classical test-hybrid test-pqc \
+.PHONY: all qseal qseal-server qseal-client hybrid pqc test test-qseal test-hybrid test-pqc test-security-lab \
         clean clean-all clean-arm64 clean-arm32 clean-x86_64 \
         arm64 aarch64 arm32 armhf x86_64 amd64 \
-        classical-arm64 classical-arm32 classical-x86_64 \
         hybrid-arm64 hybrid-arm32 hybrid-x86_64 \
         pqc-arm64 pqc-arm32 pqc-x86_64 \
         bench bench_pqc benchpqc \
-        ui run-ui attack-ui run-attack-ui app \
+        attack-ui run-attack-ui \
         package package-all package-x86 package-arm64 package-arm32 \
         detect info help banner
 
-all: banner classical hybrid pqc bench_pqc
+all: banner qseal hybrid pqc bench_pqc
 	@echo ""
 	@echo "╔══════════════════════════════════════════════════════════════════════════════════╗"
-	@echo "║       SUCCESS: All 3 Suites & bench_pqc Built for Target: $(TARGET_DESC)"
+	@echo "║       SUCCESS: QSEAL Core Engine & Multi-Suite Built for: $(TARGET_DESC)"
 	@echo "╚══════════════════════════════════════════════════════════════════════════════════╝"
 
 banner:
 	@echo "╔══════════════════════════════════════════════════════════════════════════════════╗"
-	@echo "║                   QRYPTONEX Multi-Suite Cryptographic Framework                  ║"
+	@echo "║   QSEAL: Quantum-Secure Enterprise Access & Link Networking Platform             ║"
 	@echo "╠══════════════════════════════════════════════════════════════════════════════════╣"
 	@echo "║  Host Machine Hardware : $(HOST_ARCH)"
 	@echo "║  Detected Architecture : $(ARCH_DESC)"
@@ -88,11 +87,18 @@ banner:
 	@echo "║  Active Sub-Makefiles  : */$(TARGET_MAKEFILE)"
 	@echo "╚══════════════════════════════════════════════════════════════════════════════════╝"
 
-# ── Dynamic Multi-Suite Build Targets ────────────────────────────────
-classical:
-	@echo "==> Building Classical IoT Suite [classical/$(TARGET_MAKEFILE)]..."
-	$(MAKE) -C classical -f $(TARGET_MAKEFILE) all
+# ── QSEAL Core Platform Production Engine ───────────────────────────
+qseal:
+	@echo "==> Building QSEAL Production Engine [securecomm]..."
+	$(MAKE) -C securecomm all
 
+qseal-server: qseal
+	./securecomm/bin/qseal server start
+
+qseal-client: qseal
+	./securecomm/bin/qseal client connect
+
+# ── Dynamic Multi-Suite Build Targets ────────────────────────────────
 hybrid:
 	@echo "==> Building Hybrid Suite [hybrid/$(TARGET_MAKEFILE)]..."
 	$(MAKE) -C hybrid -f $(TARGET_MAKEFILE) all
@@ -112,15 +118,6 @@ x86_64 amd64:
 	$(MAKE) ARCH=x86_64 all
 
 # ── Explicit Suite + Architecture Targets ────────────────────────────
-classical-x86_64:
-	$(MAKE) -C classical -f Makefile all
-
-classical-arm64:
-	$(MAKE) -C classical -f Makefile.arm64 all
-
-classical-arm32:
-	$(MAKE) -C classical -f Makefile.arm32 all
-
 hybrid-x86_64:
 	$(MAKE) -C hybrid -f Makefile all
 
@@ -149,14 +146,14 @@ bench: bench_pqc
 	./bench_pqc
 
 # ── Testing Targets ──────────────────────────────────────────────────
-test: test-classical test-hybrid test-pqc
+test: test-qseal test-hybrid test-pqc test-security-lab
 	@echo ""
 	@echo "╔══════════════════════════════════════════════════════════════════════════════════╗"
-	@echo "║        ALL TESTS PASSED: Classical, Hybrid, and Pure PQC Validated               ║"
+	@echo "║        ALL TESTS PASSED: QSEAL Core, Hybrid, and Pure PQC Validated              ║"
 	@echo "╚══════════════════════════════════════════════════════════════════════════════════╝"
 
-test-classical:
-	$(MAKE) -C classical test
+test-qseal:
+	$(MAKE) -C securecomm test
 
 test-hybrid:
 	$(MAKE) -C hybrid test
@@ -164,49 +161,45 @@ test-hybrid:
 test-pqc:
 	$(MAKE) -C pqc test
 
+test-security-lab:
+	$(MAKE) -C security_lab test
+
 # ── Clean Targets (Device-Aware & Multi-Arch) ────────────────────────
 clean:
 	@echo "==> Cleaning build artifacts for active target [$(TARGET_DESC)]..."
-	$(MAKE) -C classical -f $(TARGET_MAKEFILE) clean
+	$(MAKE) -C securecomm clean
 	$(MAKE) -C hybrid -f $(TARGET_MAKEFILE) clean
 	$(MAKE) -C pqc -f $(TARGET_MAKEFILE) clean
+	$(MAKE) -C security_lab clean 2>/dev/null || true
 	rm -f bench_pqc benchpqc /tmp/pqc_bench_*.json
 
 clean-arm64:
 	@echo "==> Cleaning ARM64 artifacts across all suites..."
-	$(MAKE) -C classical -f Makefile.arm64 clean
+	$(MAKE) -C securecomm clean
 	$(MAKE) -C hybrid -f Makefile.arm64 clean
 	$(MAKE) -C pqc -f Makefile.arm64 clean
 
 clean-arm32:
 	@echo "==> Cleaning ARM32 artifacts across all suites..."
-	$(MAKE) -C classical -f Makefile.arm32 clean
+	$(MAKE) -C securecomm clean
 	$(MAKE) -C hybrid -f Makefile.arm32 clean
 	$(MAKE) -C pqc -f Makefile.arm32 clean
 
 clean-x86_64:
 	@echo "==> Cleaning x86_64 artifacts across all suites..."
-	$(MAKE) -C classical -f Makefile clean
+	$(MAKE) -C securecomm clean
 	$(MAKE) -C hybrid -f Makefile clean
 	$(MAKE) -C pqc -f Makefile clean
 	rm -f bench_pqc benchpqc /tmp/pqc_bench_*.json
 
 clean-all:
 	@echo "==> Deep cleaning all suites across all architectures (x86_64, arm64, arm32)..."
-	$(MAKE) -C classical clean-all
+	$(MAKE) -C securecomm clean
 	$(MAKE) -C hybrid clean-all
 	$(MAKE) -C pqc clean-all
 	rm -f bench_pqc benchpqc /tmp/pqc_bench_*.json
-	$(MAKE) -C ui clean 2>/dev/null || true
+	$(MAKE) -C security_lab clean 2>/dev/null || true
 	@echo "All build artifacts, objects, libraries, and binaries removed."
-
-# ── GTK 4 Graphical Dashboard ────────────────────────────────────────
-ui:
-	@echo "==> Building GTK 4 C Dashboard..."
-	$(MAKE) -C ui all
-
-run-ui:
-	./run_ui.sh
 
 # ── GTK 4 Security & Attack Lab UI ──────────────────────────────────
 attack-ui:
@@ -215,10 +208,6 @@ attack-ui:
 
 run-attack-ui: attack-ui
 	./security_lab/ui/attack_ui
-
-# ── Unified Dual-Console UI Launcher ─────────────────────────────────
-app:
-	./app.sh
 
 # ── Multi-Architecture Debian Packaging ──────────────────────────────
 package package-all:
@@ -245,62 +234,48 @@ detect info: banner
 
 help:
 	@echo "╔══════════════════════════════════════════════════════════════════════════════════╗"
-	@echo "║           QRYPTONEX Multi-Suite Cryptographic Framework                          ║"
+	@echo "║      QSEAL: Quantum-Secure Enterprise Access & Link Networking Platform          ║"
 	@echo "╚══════════════════════════════════════════════════════════════════════════════════╝"
 	@echo ""
-	@echo "Automatic Architecture Detection:"
-	@echo "  Running 'make' automatically detects the host CPU architecture and dispatches:"
-	@echo "    - on x86_64 host  -> builds classical/, hybrid/, pqc/ with Makefile"
-	@echo "    - on ARM64 host   -> builds classical/, hybrid/, pqc/ with Makefile.arm64"
-	@echo "    - on ARM32 host   -> builds classical/, hybrid/, pqc/ with Makefile.arm32"
+	@echo "Core Production Platform Targets:"
+	@echo "  make qseal          - Build production QSEAL CLI, daemon, and client (bin/qseal)"
+	@echo "  make qseal-server   - Launch independent QSEAL UDP server"
+	@echo "  make qseal-client   - Connect independent QSEAL client"
 	@echo ""
-	@echo "Build Targets (Auto-Detected Device or Overridden):"
-	@echo "  make                - Auto-detect architecture and build all 3 suites"
-	@echo "  make all            - Auto-detect architecture and build all 3 suites"
-	@echo "  make classical      - Build classical IoT suite for detected device"
+	@echo "Multi-Suite Cryptographic Subsystems:"
+	@echo "  make                - Auto-detect architecture and build all suites"
+	@echo "  make all            - Auto-detect architecture and build all suites"
 	@echo "  make hybrid         - Build hybrid suite for detected device"
 	@echo "  make pqc            - Build pure post-quantum suite for detected device"
 	@echo ""
-	@echo "Target Architecture Shortcuts (Cross-compilation or Explicit):"
-	@echo "  make arm64          - Build ARM64 binaries for all 3 suites (Makefile.arm64)"
-	@echo "  make arm32          - Build ARM32 binaries for all 3 suites (Makefile.arm32)"
-	@echo "  make x86_64         - Build x86_64 binaries for all 3 suites (Makefile)"
-	@echo "  make ARCH=arm64 all - Override architecture parameter"
-	@echo ""
-	@echo "Per-Suite Specific Architecture Targets:"
-	@echo "  make classical-arm64 / classical-arm32 / classical-x86_64"
-	@echo "  make hybrid-arm64    / hybrid-arm32    / hybrid-x86_64"
-	@echo "  make pqc-arm64       / pqc-arm32       / pqc-x86_64"
-	@echo ""
 	@echo "Testing Targets:"
-	@echo "  make test           - Run regression test suites for all 3 implementations"
-	@echo "  make test-classical - Run classical 22-test automated regression suite"
-	@echo "  make test-hybrid    - Run hybrid 7-suite automated regression suite"
-	@echo "  make test-pqc       - Run PQC 8-test security and regression suite"
+	@echo "  make test           - Run regression test suites for all implementations"
+	@echo "  make test-qseal     - Run QSEAL unit and integration test suite"
+	@echo "  make test-hybrid    - Run hybrid cryptographic suite tests"
+	@echo "  make test-pqc       - Run pure post-quantum suite tests"
+	@echo "  make test-security-lab - Run security lab safety & parsing verification"
 	@echo ""
 	@echo "Benchmarking Targets:"
 	@echo "  make bench          - Run unified comparative benchmark runner (bench_pqc)"
-	@echo "  make bench_pqc      - Build master benchmark runner (bench_pqc & benchpqc)"
+	@echo "  ./securecomm/bin/qseal benchmark --mode hybrid - Benchmark hybrid cryptography"
+	@echo "  ./securecomm/bin/qseal benchmark --mode pqc    - Benchmark pure PQC cryptography"
 	@echo ""
-	@echo "GTK 4 Pure C Dashboard & Security Testing Targets:"
-	@echo "  make ui             - Build pure C GTK 4 server & telemetry dashboard (ui/qhack_ui)"
-	@echo "  make run-ui         - Run pure C GTK 4 dashboard (or ./run_ui.sh)"
-	@echo "  make attack-ui      - Build pure C GTK 4 security & attack evaluation UI (security_lab/ui/attack_ui)"
+	@echo "Optional GTK 4 Security Testing Targets:"
+	@echo "  make attack-ui      - Build pure C GTK 4 security & attack evaluation UI"
 	@echo "  make run-attack-ui  - Run pure C GTK 4 security & attack evaluation UI"
-	@echo "  make app            - Launch both GTK 4 consoles side-by-side (or ./app.sh)"
 	@echo ""
-	@echo "Debian Packaging Targets (securecomm/):"
-	@echo "  make package        - Build all 3 Debian packages (x86, arm64, arm32)"
-	@echo "  make package-x86    - Build nexqor-x86.deb (amd64)"
-	@echo "  make package-arm64  - Build nexqor-arm64.deb (arm64)"
-	@echo "  make package-arm32  - Build nexqor-arm32.deb (armhf)"
+	@echo "Debian Packaging Targets (securecomm/packaging/debian/):"
+	@echo "  make package        - Build all 3 Debian packages (amd64, arm64, arm32)"
+	@echo "  make package-x86    - Build qseal-amd64.deb (amd64)"
+	@echo "  make package-arm64  - Build qseal-arm64.deb (arm64)"
+	@echo "  make package-arm32  - Build qseal-arm32.deb (armhf)"
 	@echo ""
 	@echo "Clean Targets (Device-Aware & Multi-Arch):"
 	@echo "  make clean          - Clean build artifacts for detected device architecture"
-	@echo "  make clean-arm64    - Clean ARM64 binaries across all 3 suites"
-	@echo "  make clean-arm32    - Clean ARM32 binaries across all 3 suites"
-	@echo "  make clean-x86_64   - Clean x86_64 binaries across all 3 suites"
-	@echo "  make clean-all      - Deep clean all architectures across all 3 suites"
+	@echo "  make clean-arm64    - Clean ARM64 binaries across all suites"
+	@echo "  make clean-arm32    - Clean ARM32 binaries across all suites"
+	@echo "  make clean-x86_64   - Clean x86_64 binaries across all suites"
+	@echo "  make clean-all      - Deep clean all architectures across all suites"
 	@echo ""
 	@echo "Diagnostic Targets:"
 	@echo "  make detect / info  - Display detected hardware and active Makefile mapping"

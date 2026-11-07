@@ -27,6 +27,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <openssl/rand.h>
+#include <openssl/crypto.h>
 
 static void get_random_bytes(void *buf, size_t len) {
     if (RAND_bytes((unsigned char *)buf, (int)len) != 1) {
@@ -435,10 +436,10 @@ int securecomm_client_run_interactive(securecomm_client_t *client) {
     if (!client || !client->connected) return SECURECOMM_ERR_INVALID_ARG;
 
     printf("\n╔═══════════════════════════════════════════════════════════════╗\n");
-    printf("║             NEXQOR INTERACTIVE SECURE CHAT                    ║\n");
-    printf("║ Type messages to send encrypted over UDP. Type /quit to exit.  ║\n");
-    printf("║ Real-Time 2-Way: Inbound server commands display instantly.   ║\n");
-    printf("║ Commands: /status, /metrics, /ping, /quit                     ║\n");
+    printf("║                QSEAL INTERACTIVE SECURE CHAT                  ║\n");
+    printf("║ Type messages to send encrypted over UDP. Type /quit to exit. ║\n");
+    printf("║ Real-Time 2-Way: Inbound routed peer messages appear live.    ║\n");
+    printf("║ Commands: /status, /metrics, /ping, /to <id> <msg>, /quit     ║\n");
     printf("╚═══════════════════════════════════════════════════════════════╝\n\n");
 
     struct pollfd pfds[2];
@@ -447,7 +448,7 @@ int securecomm_client_run_interactive(securecomm_client_t *client) {
     pfds[1].fd = client->sock_fd;
     pfds[1].events = POLLIN;
 
-    printf("securecomm> ");
+    printf("qseal> ");
     fflush(stdout);
 
     char line[1024];
@@ -480,7 +481,7 @@ int securecomm_client_run_interactive(securecomm_client_t *client) {
             int r_rc = securecomm_client_recv(client, rx_buf, sizeof(rx_buf) - 1, &rx_len, 5);
             if (r_rc == SECURECOMM_SUCCESS && rx_len > 0) {
                 rx_buf[rx_len] = '\0';
-                printf("\r\033[K[SERVER → YOU] %s\nsecurecomm> ", (char *)rx_buf);
+                printf("\r\033[K[SERVER → YOU] %s\nqseal> ", (char *)rx_buf);
                 fflush(stdout);
             }
         }
@@ -495,16 +496,26 @@ int securecomm_client_run_interactive(securecomm_client_t *client) {
                 slen--;
             }
             if (slen == 0) {
-                printf("securecomm> ");
+                printf("qseal> ");
                 fflush(stdout);
                 continue;
             }
 
             if (strcmp(line, "/quit") == 0 || strcmp(line, "/exit") == 0) {
                 break;
+            } else if (strcmp(line, "/help") == 0) {
+                printf("Available Commands:\n");
+                printf("  /status           - Display connection telemetry & cipher statistics\n");
+                printf("  /ping             - Send heartbeat keepalive probe to server\n");
+                printf("  /to <id> <msg>    - Send private routed message to client <id>\n");
+                printf("  /to all <msg>     - Broadcast message to all active clients\n");
+                printf("  /quit, /exit      - Terminate session and disconnect cleanly\n");
+                printf("qseal> ");
+                fflush(stdout);
+                continue;
             } else if (strcmp(line, "/status") == 0 || strcmp(line, "/metrics") == 0) {
                 securecomm_metrics_print(&client->metrics, stdout);
-                printf("securecomm> ");
+                printf("qseal> ");
                 fflush(stdout);
                 continue;
             } else if (strcmp(line, "/ping") == 0) {
@@ -515,18 +526,38 @@ int securecomm_client_run_interactive(securecomm_client_t *client) {
                 ping_hdr.session_id = client->session_id;
                 sendto(client->sock_fd, &ping_hdr, sizeof(wire_hdr_t), 0,
                        (struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
-                printf("[Sent PING to server]\nsecurecomm> ");
+                printf("[Sent PING to server]\nqseal> ");
                 fflush(stdout);
                 continue;
             }
 
-            int rc = securecomm_client_send(client, (const uint8_t *)line, strlen(line));
+            /* Support /to command: "/to 2 hello" -> "to:2:hello" */
+            char send_payload[RX_BUF_SIZE];
+            if (strncmp(line, "/to ", 4) == 0) {
+                const char *space = strchr(line + 4, ' ');
+                if (space) {
+                    char target[32] = {0};
+                    size_t tlen = (size_t)(space - (line + 4));
+                    if (tlen < sizeof(target)) {
+                        memcpy(target, line + 4, tlen);
+                        snprintf(send_payload, sizeof(send_payload), "to:%s:%s", target, space + 1);
+                    } else {
+                        snprintf(send_payload, sizeof(send_payload), "%s", line);
+                    }
+                } else {
+                    snprintf(send_payload, sizeof(send_payload), "%s", line);
+                }
+            } else {
+                snprintf(send_payload, sizeof(send_payload), "%s", line);
+            }
+
+            int rc = securecomm_client_send(client, (const uint8_t *)send_payload, strlen(send_payload));
             if (rc == SECURECOMM_SUCCESS) {
-                printf("[YOU → SERVER] %s  (Encrypted: %zu bytes)\n", line, strlen(line) + 28);
+                printf("[YOU → SERVER] %s  (Encrypted: %zu bytes)\n", line, strlen(send_payload) + 28);
             } else {
                 printf("[Error sending message: %s]\n", securecomm_strerror(rc));
             }
-            printf("securecomm> ");
+            printf("qseal> ");
             fflush(stdout);
         }
     }
@@ -540,6 +571,8 @@ int securecomm_client_run_interactive(securecomm_client_t *client) {
     sendto(client->sock_fd, &disc_hdr, sizeof(wire_hdr_t), 0,
            (struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
     client->connected = false;
+    OPENSSL_cleanse(client->tx_key, sizeof(client->tx_key));
+    OPENSSL_cleanse(client->rx_key, sizeof(client->rx_key));
 
     return SECURECOMM_SUCCESS;
 }
@@ -556,5 +589,7 @@ void securecomm_client_disconnect(securecomm_client_t *client) {
     sendto(client->sock_fd, &disc_hdr, sizeof(wire_hdr_t), 0,
            (struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
     client->connected = false;
+    OPENSSL_cleanse(client->tx_key, sizeof(client->tx_key));
+    OPENSSL_cleanse(client->rx_key, sizeof(client->rx_key));
     SECURECOMM_LOG_INFO("Disconnected from server");
 }

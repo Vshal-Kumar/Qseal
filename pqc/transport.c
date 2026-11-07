@@ -649,13 +649,10 @@ int server_publish_endpoints(char *lan_ip, size_t lan_len,
     if (!inet_ntop(AF_INET, &sin->sin_addr, ip_str, sizeof(ip_str)))
       continue;
 
-    /* Detect Tailscale / Wireguard / VPN interfaces or CGNAT 100.64.0.0/10 */
+    /* Detect Virtual / Tunnel interfaces */
     int is_vpn = 0;
-    if (strncmp(ifa->ifa_name, "tailscale", 9) == 0 ||
-        strncmp(ifa->ifa_name, "ts", 2) == 0 ||
-        strncmp(ifa->ifa_name, "wg", 2) == 0 ||
-        strncmp(ifa->ifa_name, "tun", 3) == 0 ||
-        strncmp(ip_str, "100.", 4) == 0) {
+    if (strncmp(ifa->ifa_name, "tun", 3) == 0 ||
+        strncmp(ifa->ifa_name, "tap", 3) == 0) {
       is_vpn = 1;
     }
 
@@ -710,7 +707,7 @@ int resolve_server_address(const char *input_target, struct sockaddr_in *out_pee
                            char *resolved_ip_str, size_t str_len) {
   char candidate[128] = "";
 
-  /* Priority 1: User explicitly supplied argument (IP, hostname, Tailscale MagicDNS) */
+  /* Priority 1: User explicitly supplied argument (IP, hostname, or DNS name) */
   if (input_target && input_target[0] != '\0') {
     snprintf(candidate, sizeof(candidate), "%s", input_target);
   }

@@ -9,9 +9,9 @@ SAN_FLAGS = -fsanitize=address,undefined -g -O1
 
 PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
-SYSCONFDIR ?= /etc/securecomm
-VARDIR ?= /var/lib/securecomm
-LOGDIR ?= /var/log/securecomm
+SYSCONFDIR ?= /etc/qseal
+VARDIR ?= /var/lib/qseal
+LOGDIR ?= /var/log/qseal
 SYSTEMDDIR ?= /usr/lib/systemd/system
 
 REPO_ROOT = $(shell pwd)/..
@@ -43,7 +43,7 @@ OBJS = $(SRCS:.c=.o)
 MAIN_SRC = src/main.c
 MAIN_OBJ = src/main.o
 
-TARGET = bin/securecomm
+TARGET = bin/qseal
 
 TEST_UNIT_SRCS = tests/unit/test_config.c \
                  tests/unit/test_device.c \
@@ -63,7 +63,8 @@ all: $(TARGET)
 $(TARGET): $(OBJS) $(MAIN_OBJ)
 	@mkdir -p bin
 	$(CC) $(CFLAGS) $(OBJS) $(MAIN_OBJ) $(LDFLAGS) $(LIBS) -o $@
-	@echo "Built $(TARGET) successfully."
+	@ln -sf qseal bin/securecomm
+	@echo "Built $(TARGET) and created bin/securecomm symlink successfully."
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
@@ -96,18 +97,24 @@ integration_tests: $(TEST_INTEG_BINS)
 
 install: $(TARGET)
 	install -d $(DESTDIR)$(BINDIR)
-	install -m 0755 $(TARGET) $(DESTDIR)$(BINDIR)/securecomm
+	install -m 0755 $(TARGET) $(DESTDIR)$(BINDIR)/qseal
+	ln -sf qseal $(DESTDIR)$(BINDIR)/securecomm
 	install -d -m 0700 $(DESTDIR)$(SYSCONFDIR)
 	install -d -m 0700 $(DESTDIR)$(VARDIR)
 	install -d -m 0750 $(DESTDIR)$(LOGDIR)
-	@if [ -f packaging/systemd/securecomm.service ]; then \
+	@if [ -f packaging/systemd/qseal-server.service ]; then \
 		install -d $(DESTDIR)$(SYSTEMDDIR); \
-		install -m 0644 packaging/systemd/securecomm.service $(DESTDIR)$(SYSTEMDDIR)/securecomm.service; \
+		install -m 0644 packaging/systemd/qseal-server.service $(DESTDIR)$(SYSTEMDDIR)/qseal-server.service; \
+		install -m 0644 packaging/systemd/qseal-client.service $(DESTDIR)$(SYSTEMDDIR)/qseal-client.service; \
+		ln -sf qseal-server.service $(DESTDIR)$(SYSTEMDDIR)/qseal.service; \
+		ln -sf qseal-server.service $(DESTDIR)$(SYSTEMDDIR)/securecomm.service; \
 	fi
-	@echo "Installed SecureComm to $(DESTDIR)$(PREFIX)"
+	@echo "Installed QSEAL to $(DESTDIR)$(PREFIX)"
 
 uninstall:
+	rm -f $(DESTDIR)$(BINDIR)/qseal
 	rm -f $(DESTDIR)$(BINDIR)/securecomm
+	rm -f $(DESTDIR)$(SYSTEMDDIR)/qseal*.service
 	rm -f $(DESTDIR)$(SYSTEMDDIR)/securecomm.service
 	@echo "Uninstalled binary and service. Configuration at $(DESTDIR)$(SYSCONFDIR) preserved."
 

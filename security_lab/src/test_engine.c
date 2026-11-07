@@ -135,12 +135,12 @@ int test_engine_parse_args(engine_config_t *cfg, int argc, char **argv) {
 
 void test_engine_print_help(const char *prog_name) {
     printf("╔══════════════════════════════════════════════════════════════════════════╗\n");
-    printf("║    QRYPTONEX Unified Pure-C Real-Network Security Testing Framework      ║\n");
+    printf("║    QSEAL Unified Pure-C Real-Network Security Testing Framework          ║\n");
     printf("╚══════════════════════════════════════════════════════════════════════════╝\n\n");
     printf("Usage:\n");
     printf("  %s [options]\n\n", prog_name);
     printf("Options:\n");
-    printf("  --suite <name|all>        Select cryptographic suite (classical, hybrid, pqc, all)\n");
+    printf("  --suite <name|all>        Select cryptographic suite (hybrid, pqc, qseal, all)\n");
     printf("  --scenario <name|all>     Select security scenario (see --list-scenarios)\n");
     printf("  --target <ip>             Authorized target IP address (default: 127.0.0.1)\n");
     printf("  --port <port>             Target UDP port (default: auto per suite)\n");
@@ -155,16 +155,16 @@ void test_engine_print_help(const char *prog_name) {
     printf("  %s --list-suites\n", prog_name);
     printf("  %s --suite pqc --scenario baseline --dry-run\n", prog_name);
     printf("  %s --suite hybrid --scenario replay --target 127.0.0.1\n", prog_name);
-    printf("  %s --suite classical --scenario tampering\n", prog_name);
+    printf("  %s --suite qseal --scenario tampering\n", prog_name);
     printf("  %s --suite all --scenario all\n\n", prog_name);
 }
 
 void test_engine_list_suites(void) {
     printf("\nSupported Cryptographic Implementations:\n");
-    printf("  1. classical  - X25519 + Ed25519 + AES-128-CCM (Port 9877)\n");
-    printf("  2. hybrid     - Dual X25519/ML-KEM-768 + Dual Ed25519/ML-DSA-65 + ChaCha20-Poly1305 (Port 9879)\n");
-    printf("  3. pqc        - Pure Post-Quantum ML-KEM-768 + ML-DSA-65 + ChaCha20-Poly1305 (Port 9877)\n");
-    printf("  4. all        - Execute comparative evaluation across all 3 suites sequentially\n\n");
+    printf("  1. hybrid     - Dual X25519/ML-KEM-768 + Dual Ed25519/ML-DSA-65 + ChaCha20-Poly1305 (Port 9879)\n");
+    printf("  2. pqc        - Pure Post-Quantum ML-KEM-768 + ML-DSA-65 + ChaCha20-Poly1305 (Port 9877)\n");
+    printf("  3. qseal      - QSEAL Adaptive Production Engine (Port 9876)\n");
+    printf("  4. all        - Execute comparative evaluation across supported suites sequentially\n\n");
 }
 
 void test_engine_list_scenarios(void) {
@@ -269,10 +269,9 @@ int test_engine_run(const engine_config_t *cfg) {
     int suite_count = 0;
 
     if ((int)cfg->suite_filter == -1) {
-        suites_to_test[0] = SUITE_TYPE_CLASSICAL;
-        suites_to_test[1] = SUITE_TYPE_HYBRID;
-        suites_to_test[2] = SUITE_TYPE_PQC;
-        suite_count = 3;
+        suites_to_test[0] = SUITE_TYPE_HYBRID;
+        suites_to_test[1] = SUITE_TYPE_PQC;
+        suite_count = 2;
     } else {
         suites_to_test[0] = cfg->suite_filter;
         suite_count = 1;
