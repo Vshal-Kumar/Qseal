@@ -21,8 +21,6 @@ liboqs/build*/
 qseal/bin/
 qseal/packaging/debian/obj_*/
 qseal/packaging/debian/staging*/
-qseal/packaging/debian/*.deb
-*.deb
 
 # Executable Binaries (Keep source files)
 **/server
