@@ -62,7 +62,7 @@ int trust_store_client_verify_server(const uint8_t srv_dsa_pk[DSA_PK_BYTES],
                                      const char *pinned_pub_path) {
     if (!srv_dsa_pk) return -1;
 
-    char *skip_env = getenv("NEXQOR_INSECURE_SKIP_PINNING");
+    char *skip_env = getenv("QSEAL_INSECURE_SKIP_PINNING");
     if (skip_env && strcmp(skip_env, "1") == 0) {
         fprintf(stderr, "[trust_store] WARNING: Server public key pinning bypassed via env var!\n");
         return 0;
@@ -114,7 +114,7 @@ int trust_store_server_verify_client(const uint8_t client_dsa_pk[DSA_PK_BYTES],
         return -1;
     }
 
-    char *perm_env = getenv("NEXQOR_PERMISSIVE_ENROLLMENT");
+    char *perm_env = getenv("QSEAL_PERMISSIVE_ENROLLMENT");
     if (perm_env && strcmp(perm_env, "1") == 0) {
         return 0; /* Permissive enrollment mode for benchmarks and dynamic tests */
     }
@@ -123,7 +123,7 @@ int trust_store_server_verify_client(const uint8_t client_dsa_pk[DSA_PK_BYTES],
     FILE *f = fopen(db_path, "rb");
     if (!f) {
         /* By default, if enrollment DB doesn't exist yet, we allow the first run or permissive */
-        char *strict_env = getenv("NEXQOR_STRICT_CLIENT_AUTH");
+        char *strict_env = getenv("QSEAL_STRICT_CLIENT_AUTH");
         if (strict_env && strcmp(strict_env, "1") == 0) {
             fprintf(stderr, "[trust_store] ERROR: Client DB '%s' missing and strict auth requested.\n", db_path);
             return -1;

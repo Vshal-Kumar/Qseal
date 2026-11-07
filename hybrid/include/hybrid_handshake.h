@@ -55,7 +55,7 @@ typedef enum {
  */
 typedef struct __attribute__((packed)) {
     uint16_t version;                                          /* 0x0100 */
-    uint16_t suite_id_len;                                     /* 49 */
+    uint16_t suite_id_len;                                     /* 45 */
     char     suite_id[HYBRID_SUITE_ID_LEN];
     uint8_t  client_nonce[HYBRID_SESSION_NONCE_BYTES];         /* 32 bytes */
     uint8_t  client_eph_x25519_pk[HYBRID_X25519_PK_BYTES];     /* 32 bytes */
@@ -74,7 +74,7 @@ typedef struct __attribute__((packed)) {
  */
 typedef struct __attribute__((packed)) {
     uint16_t version;                                          /* 0x0100 */
-    uint16_t suite_id_len;                                     /* 49 */
+    uint16_t suite_id_len;                                     /* 45 */
     char     suite_id[HYBRID_SUITE_ID_LEN];
     uint8_t  server_nonce[HYBRID_SESSION_NONCE_BYTES];         /* 32 bytes */
     uint64_t session_id;                                       /* 8 bytes */

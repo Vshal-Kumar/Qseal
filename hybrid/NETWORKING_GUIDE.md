@@ -1,6 +1,6 @@
-# QRYPTONEX — Hybrid IoT Networking & Dynamic Connectivity Guide
+# QSEAL — Hybrid IoT Networking & Dynamic Connectivity Guide
 
-This document details the dynamic endpoint resolution, automatic LAN discovery, and cross-network mesh connectivity (via Tailscale) for the **QRYPTONEX Hybrid Cryptographic Suite** (`X25519 + ML-KEM-768 + Ed25519 + ML-DSA-65 + ChaCha20-Poly1305`).
+This document details the dynamic endpoint resolution, automatic LAN discovery, and cross-network mesh connectivity (via Tailscale) for the **QSEAL Hybrid Cryptographic Suite** (`X25519 + ML-KEM-768 + Ed25519 + ML-DSA-65 + ChaCha20-Poly1305`).
 
 ---
 
@@ -54,7 +54,7 @@ cd hybrid
 **Startup Console Output:**
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
-║   QRYPTONEX Secure Server Core ─ Hybrid Cryptographic Suite              ║
+║   QSEAL Secure Server Core ─ Hybrid Cryptographic Suite              ║
 ║   Architecture: Linux Multi-Worker Thread Pool + Session Registry       ║
 ║   Suite: X25519 + ML-KEM-768 + Ed25519 + ML-DSA-65 + ChaCha20-Poly1305    ║
 ╚══════════════════════════════════════════════════════════════════════════╝

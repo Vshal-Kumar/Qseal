@@ -1,4 +1,4 @@
-# QRYPTONEX Repository Inspection & Protocol Mapping Report
+# QSEAL Repository Inspection & Protocol Mapping Report
 
 **Document Version:** 1.0.0  
 **Inspection Date:** 2026-10-29  
@@ -15,7 +15,7 @@ The repository contains three distinct, production-grade secure UDP communicatio
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **1. Classical IoT** | [`classical/`](file:///home/vishal-kumar/Desktop/Events/QHack/classical) | X25519 (ECDH) | Ed25519 | AES-128-CCM | SHA-256 + HKDF |
 | **2. Hybrid Suite** | [`hybrid/`](file:///home/vishal-kumar/Desktop/Events/QHack/hybrid) | X25519 + ML-KEM-768 | Ed25519 + ML-DSA-65 | ChaCha20-Poly1305 | SHA-384 + HKDF |
-| **3. Pure PQC (NEXQOR)** | [`pqc/`](file:///home/vishal-kumar/Desktop/Events/QHack/pqc) | ML-KEM-768 (Kyber768) | ML-DSA-65 (Dilithium3)| ChaCha20-Poly1305 | SHAKE-256 + KMAC |
+| **3. Pure PQC (QSEAL)** | [`pqc/`](file:///home/vishal-kumar/Desktop/Events/QHack/pqc) | ML-KEM-768 (Kyber768) | ML-DSA-65 (Dilithium3)| ChaCha20-Poly1305 | SHAKE-256 + KMAC |
 
 ---
 

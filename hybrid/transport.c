@@ -480,7 +480,7 @@ int server_publish_endpoints(char *lan_ip, size_t lan_len,
     /* Write publication files */
     FILE *f = fopen(SERVER_DISCOVERY_FILE, "w");
     if (f) {
-        fprintf(f, "# QRYPTONEX Hybrid Endpoint Discovery\n");
+        fprintf(f, "# QSEAL Hybrid Endpoint Discovery\n");
         fprintf(f, "PORT=%d\n", SERVER_PORT);
         if (strlen(detected_lan) > 0) fprintf(f, "LAN_IP=%s\n", detected_lan);
         if (strlen(detected_vpn) > 0) fprintf(f, "TAILSCALE_IP=%s\n", detected_vpn);

@@ -1,0 +1,28 @@
+[Unit]
+Description=QSEAL Quantum-Secure Networking Platform Service (Legacy Alias)
+Documentation=https://github.com/qseal/qseal
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/qseal server start --config /etc/qseal/qseal.json
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=65536
+
+# Security and Isolation Sandboxing
+DynamicUser=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+MemoryDenyWriteExecute=yes
+ReadWritePaths=/etc/qseal /var/lib/qseal /var/log/qseal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,4 +1,4 @@
-name: NEXQOR CI
+name: QSEAL CI
 
 on:
   push:
@@ -40,7 +40,7 @@ jobs:
               -DBUILD_SHARED_LIBS=OFF
         cmake --build liboqs/build -j$(nproc)
 
-    - name: Build NEXQOR (x86_64)
+    - name: Build QSEAL (x86_64)
       run: |
         make clean
         make all

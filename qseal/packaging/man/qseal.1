@@ -1,0 +1,156 @@
+.TH QSEAL 1 "November 2026" "QSEAL 1.0.0" "Quantum-Secure Enterprise Access & Link Manual"
+.SH NAME
+qseal \- Quantum-Secure Enterprise Access & Link Platform
+.SH SYNOPSIS
+.B qseal
+[\fIcommand\fR] [\fIsubcommand\fR] [\fIoptions\fR]
+.br
+.B qseal-server
+[\fIsubcommand\fR] [\fIoptions\fR]
+.br
+.B qseal-client
+[\fIsubcommand\fR] [\fIoptions\fR]
+
+.SH DESCRIPTION
+\fBQSEAL\fR is an independent, high-performance secure networking platform operating over native UDP sockets.
+It provides quantum-resistant mutual authentication, post-quantum key establishment, authenticated encryption, and sliding replay protection without relying on third-party coordination servers, Tailscale, or centralized VPN infrastructure.
+
+QSEAL supports two cryptographic profiles:
+.IP \[bu] 2
+\fBHybrid Mode\fR: Combines classical X25519 ECDH key exchange with post-quantum ML-KEM-768 (NIST FIPS 203) using HKDF-SHA-384, authenticated via ML-DSA-65 (NIST FIPS 204) digital signatures and encrypted with ChaCha20-Poly1305 (RFC 8439).
+.IP \[bu] 2
+\fBPure PQC Mode\fR: Uses exclusively standardized post-quantum primitives (ML-KEM-768, ML-DSA-65) and ChaCha20-Poly1305.
+
+.SH PLATFORM COMMANDS
+.TP
+.B setup
+Launch the interactive onboarding setup wizard to benchmark hardware, configure networking, select cryptographic profiles, and generate identity keys.
+.TP
+.B detect
+Analyze host architecture, SIMD CPU extensions (AVX2, NEON, AES-NI), memory budgets, and cryptographic provider readiness.
+.TP
+.B diagnostics
+Execute end-to-end network reachability, UDP port availability, NAT/CGNAT classification, and cryptographic verification checks.
+.TP
+.B status
+Display global platform status, active configuration paths, server daemon state, and client connectivity.
+.TP
+.B clients
+Display authoritative real-time table of all authenticated active client sessions connected to the local server.
+.TP
+.B benchmark
+Execute microbenchmarks for KEX key generation, encapsulation, decapsulation, DSA signing, DSA verification, and AEAD encryption.
+
+.SH SERVER COMMANDS
+.TP
+.B server start [\fIport\fR]
+Launch the independent QSEAL UDP server in the foreground. Default UDP port is 9877.
+.TP
+.B server stop
+Gracefully terminate the background QSEAL server process using SIGTERM.
+.TP
+.B server restart
+Restart the running QSEAL server.
+.TP
+.B server status
+Query authoritative runtime telemetry, listening address, advertised endpoint, uptime, and active client counts.
+.TP
+.B server clients
+Print detailed table of all connected clients, device IDs, remote IP:Port endpoints, session IDs, and traffic statistics.
+.TP
+.B server show-logs
+Display recent log entries from the server log file.
+.TP
+.B server validate
+Validate the syntax, network attributes, and permissions of the server configuration file.
+.TP
+.B server init
+Initialize cryptographic identity keys and generate default YAML configuration.
+
+.SH CLIENT COMMANDS
+.TP
+.B client connect [\fIhost\fR] [\fIport\fR]
+Establish a quantum-safe encrypted UDP connection to the remote server.
+.TP
+.B client disconnect
+Terminate the active client connection.
+.TP
+.B client status
+Display client tunnel status and session telemetry.
+.TP
+.B client show-logs
+Display recent client log output.
+.TP
+.B client validate
+Validate the syntax and permissions of the client configuration file.
+.TP
+.B client init
+Initialize client cryptographic identity keys and generate default YAML configuration.
+
+.SH GLOBAL OPTIONS
+.TP
+.BI \-\-config " path"
+Specify explicit path to configuration YAML or JSON file.
+.TP
+.BI \-\-port " port"
+Specify UDP listening or target port (default: 9877).
+.TP
+.BI \-\-bind " ip"
+Specify local IP address to bind server socket (default: 0.0.0.0).
+.TP
+.BI \-\-advertised " endpoint"
+Specify public-facing WAN IP:Port or hostname advertised to external clients.
+.TP
+.BI \-\-server " host"
+Remote server hostname or IPv4 address.
+.TP
+.BI \-\-mode " hybrid|pqc"
+Select cryptographic profile (default: hybrid).
+.TP
+.BI \-\-msg " text"
+Transmit a single encrypted message and disconnect (non-interactive).
+.TP
+.B \-\-non-interactive
+Execute automated initialization without interactive prompts.
+.TP
+.B \-v, \-\-version
+Print version information and exit.
+.TP
+.B \-h, \-\-help
+Print command usage summary and exit.
+
+.SH CONFIGURATION FILES
+.TP
+.I /etc/qseal/server.yaml
+Primary server configuration file.
+.TP
+.I /etc/qseal/client.yaml
+Primary client configuration file.
+.TP
+.I /var/lib/qseal/
+Directory containing identity private keys (permissions 0600) and public keys (permissions 0644).
+.TP
+.I /var/log/qseal/
+Directory containing operational log files.
+.TP
+.I /run/qseal/qseal-server.status
+Authoritative JSON runtime state maintained by the running server daemon.
+
+.SH SYSTEMD SERVICES
+.TP
+.B qseal-server.service
+Systemd unit managing the background server daemon.
+.TP
+.B qseal-client.service
+Systemd unit managing the background client tunnel.
+
+.SH SECURITY CONSIDERATIONS
+Private key files in \fI/etc/qseal/\fR and \fI/var/lib/qseal/\fR must strictly maintain file permissions of 0600.
+Network deployments behind edge routers require UDP port 9877 to be forwarded to the server's private IP.
+Servers behind Carrier-Grade NAT (CGNAT, RFC 6598) cannot accept unsolicited inbound connections; use a public static IP or cloud VPS.
+
+.SH AUTHOR
+QSEAL Engineering Team
+.SH COPYRIGHT
+Copyright (C) 2026 QSEAL Project. All rights reserved.
+

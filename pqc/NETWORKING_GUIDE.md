@@ -1,6 +1,6 @@
-# NEXQOR / QRYPTONEX — Dynamic Networking & Cross-Network Guide
+# QSEAL / QSEAL — Dynamic Networking & Cross-Network Guide
 
-This guide details the dynamic server resolution, automatic LAN discovery, and external/cross-network connectivity (via Tailscale) for **NEXQOR / QRYPTONEX**.
+This guide details the dynamic server resolution, automatic LAN discovery, and external/cross-network connectivity (via Tailscale) for **QSEAL / QSEAL**.
 
 ---
 
@@ -15,17 +15,17 @@ When any client or benchmark starts, `resolve_server_address()` determines the s
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │ 1. Explicit CLI Target (IP, hostname, or Tailscale MagicDNS name)      │
-│    e.g., ./client 10.58.3.114 or ./client nexqor-server                │
+│    e.g., ./client 10.58.3.114 or ./client qseal-server                │
 └──────────────────────────────────┬─────────────────────────────────────┘
                                    │ (if not supplied)
 ┌──────────────────────────────────▼─────────────────────────────────────┐
-│ 2. Environment Variables (PQC_SERVER_IP, SERVER_IP, NEXQOR_SERVER)    │
+│ 2. Environment Variables (PQC_SERVER_IP, SERVER_IP, QSEAL_SERVER)    │
 │    e.g., export PQC_SERVER_IP="100.104.77.63"                          │
 └──────────────────────────────────┬─────────────────────────────────────┘
                                    │ (if not set)
 ┌──────────────────────────────────▼─────────────────────────────────────┐
 │ 3. System & Directory Discovery Files                                  │
-│    Reads /tmp/nexqor_server.ip or ./server_endpoint.info published     │
+│    Reads /tmp/qseal_server.ip or ./server_endpoint.info published     │
 │    automatically by the running server.                                │
 └──────────────────────────────────┬─────────────────────────────────────┘
                                    │ (if running on a remote device)
@@ -53,7 +53,7 @@ When `server` launches, it binds to `0.0.0.0:9877` (all interfaces: Loopback, Wi
 
 **Console Output:**
 ```
-[18:31:18.799] QRYPTONEX — Post-Quantum Secure Server
+[18:31:18.799] QSEAL — Post-Quantum Secure Server
   Protocol : ML-KEM-768 + ML-DSA-65 + ChaCha20-Poly1305
   Address  : 0.0.0.0:9877  |  Max clients: 4096
   Active Endpoints (Auto-Discovered & Published):
@@ -63,7 +63,7 @@ When `server` launches, it binds to `0.0.0.0:9877` (all interfaces: Loopback, Wi
     • Auto-Discovery Service  : UDP Broadcast Probe on port 9877
 ```
 
-The server also writes these endpoints to `server_endpoint.info` and `/tmp/nexqor_server.ip`.
+The server also writes these endpoints to `server_endpoint.info` and `/tmp/qseal_server.ip`.
 
 ---
 
@@ -195,7 +195,7 @@ All dynamic resolution capabilities are fully supported across all targets:
 2. **Verify Server Discovery Files**:
    ```bash
    cat server_endpoint.info
-   cat /tmp/nexqor_server.ip
+   cat /tmp/qseal_server.ip
    ```
 
 3. **Check UDP Port Reachability**:

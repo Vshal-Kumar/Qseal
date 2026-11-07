@@ -1,4 +1,4 @@
-# QRYPTONEX Security Evaluation & Resilience Testing Framework
+# QSEAL Security Evaluation & Resilience Testing Framework
 # Pure C11 Linux Network Security Testing Framework
 
 CC      ?= gcc
@@ -75,16 +75,9 @@ run-baseline: $(BIN)
 run-all: $(BIN)
 	./$(BIN) --suite all --scenario all
 
-ui:
-	$(MAKE) -C ui all
-
-run-ui: ui
-	./ui/attack_ui
-
 clean:
 	rm -f $(OBJS) $(BIN) $(TEST_BINS)
 	rm -f /tmp/security_lab_server.log
-	$(MAKE) -C ui clean
 	@echo "Security lab artifacts cleaned."
 
 help:

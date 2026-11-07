@@ -1,5 +1,5 @@
 (* 
-   Formal Verification of the Hardened NEXQOR / QRYPTONEX Protocol
+   Formal Verification of the Hardened QSEAL / QSEAL Protocol
    Algorithms: ML-KEM-768 + ML-DSA-65 + ChaCha20-Poly1305 (with AAD & Directional Keys)
 *)
 

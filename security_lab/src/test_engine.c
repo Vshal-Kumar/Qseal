@@ -251,7 +251,7 @@ int test_engine_run(const engine_config_t *cfg) {
     safety_guard_validate_route(cfg->target_ip, iface, sizeof(iface));
 
     printf("\n\033[1;36m╔══════════════════════════════════════════════════════════════════════════════════════════╗\033[0m\n");
-    printf("\033[1;36m║             QRYPTONEX Real-Network Security Evaluation & Resilience Lab                  ║\033[0m\n");
+    printf("\033[1;36m║             QSEAL Real-Network Security Evaluation & Resilience Lab                  ║\033[0m\n");
     printf("\033[1;36m╚══════════════════════════════════════════════════════════════════════════════════════════╝\033[0m\n");
     printf("  • Target Host       : %s\n", cfg->target_ip);
     printf("  • Routing Interface : %s (%s)\n", iface, cfg->environment);

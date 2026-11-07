@@ -11,7 +11,7 @@
  * Server Role:
  *   - Maintains authorized client enrollment records.
  *   - Verifies incoming client public keys against the enrollment database.
- *   - Supports permissive enrollment mode for load testing via NEXQOR_PERMISSIVE_ENROLLMENT=1.
+ *   - Supports permissive enrollment mode for load testing via QSEAL_PERMISSIVE_ENROLLMENT=1.
  */
 
 #ifndef TRUST_STORE_H

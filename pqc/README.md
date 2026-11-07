@@ -1,4 +1,4 @@
-# NEXQOR — Enterprise Post-Quantum Cryptographic Network & High-Concurrency Multi-Client Engine
+# QSEAL — Enterprise Post-Quantum Cryptographic Network & High-Concurrency Multi-Client Engine
 
 [![Language: C11](https://img.shields.io/badge/Language-C11-00599C.svg?logo=c&logoColor=white)](https://en.wikipedia.org/wiki/C11_(C_standard_revision))
 [![Architecture: Heterogeneous](https://img.shields.io/badge/Architecture-x86__64%20%7C%20ARM64%20%7C%20ARM32-blue.svg)](https://arm.com)
@@ -13,11 +13,11 @@
 
 ## 📖 Executive Overview
 
-**NEXQOR** is a production-grade, SIMD-vectorized **Post-Quantum Cryptographic (PQC) networking framework**, high-concurrency multi-client relay engine, and formal verification suite written in **C11**.
+**QSEAL** is a production-grade, SIMD-vectorized **Post-Quantum Cryptographic (PQC) networking framework**, high-concurrency multi-client relay engine, and formal verification suite written in **C11**.
 
 Modern public-key cryptography (RSA, ECDH, ECDSA) relies on mathematical problems (integer factorization and discrete logarithms) that will be completely broken by polynomial-time quantum algorithms (**Shor's algorithm**) once cryptographically relevant quantum computers (CRQCs) emerge. Furthermore, adversaries are executing **"Store-Now-Decrypt-Later" (SNDL)** campaigns—intercepting and storing encrypted traffic today to retroactively decrypt it when quantum hardware becomes available.
 
-NEXQOR addresses this paradigm shift by establishing a secure communication channel between high-throughput **x86_64 servers** (accelerated via **AVX2 / BMI2**) and resource-constrained **ARM edge devices** (Raspberry Pi 4/5 via **ARM64 NEON** and Raspberry Pi 2/3 via **ARM32 NEON / VFPv4**). The framework combines NIST-standardized lattice cryptography (**ML-KEM-768**, **ML-DSA-65**), authenticated symmetric encryption (**ChaCha20-Poly1305**), and directional session key derivation (**SHAKE256**) over an asynchronous Linux **`io_uring`** engine with application-level reliability and dynamic zero-configuration network discovery.
+QSEAL addresses this paradigm shift by establishing a secure communication channel between high-throughput **x86_64 servers** (accelerated via **AVX2 / BMI2**) and resource-constrained **ARM edge devices** (Raspberry Pi 4/5 via **ARM64 NEON** and Raspberry Pi 2/3 via **ARM32 NEON / VFPv4**). The framework combines NIST-standardized lattice cryptography (**ML-KEM-768**, **ML-DSA-65**), authenticated symmetric encryption (**ChaCha20-Poly1305**), and directional session key derivation (**SHAKE256**) over an asynchronous Linux **`io_uring`** engine with application-level reliability and dynamic zero-configuration network discovery.
 
 > [!NOTE]
 > **Heterogeneous Cryptographic Implementations & Tooling Available in this Repository**:
@@ -41,7 +41,7 @@ NEXQOR addresses this paradigm shift by establishing a secure communication chan
 4. [Repository Directory Structure](#4-repository-directory-structure)
 5. [Exhaustive Setup & Compilation Guide](#5-exhaustive-setup--compilation-guide)
    - [Step 1: System Dependencies Installation](#step-1-system-dependencies-installation)
-   - [Step 2: Cloning NEXQOR & `liboqs`](#step-2-cloning-nexqor--liboqs)
+   - [Step 2: Cloning QSEAL & `liboqs`](#step-2-cloning-qseal--liboqs)
    - [Step 3: Compiling Static `liboqs` (x86_64, ARM64, ARM32)](#step-3-compiling-static-liboqs-x86_64-arm64-arm32)
    - [Step 4: Compiling Application Binaries for All 3 Device Tiers](#step-4-compiling-application-binaries-for-all-3-device-tiers)
 6. [Dynamic Networking & Tailscale Mesh Guide](#6-dynamic-networking--tailscale-mesh-guide)
@@ -319,14 +319,14 @@ sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu gcc-arm-linu
 
 ---
 
-### Step 2: Cloning NEXQOR & `liboqs`
+### Step 2: Cloning QSEAL & `liboqs`
 
-Clone the NEXQOR repository and the Open Quantum Safe library (`liboqs`):
+Clone the QSEAL repository and the Open Quantum Safe library (`liboqs`):
 
 ```bash
-# 1. Clone NEXQOR
-git clone https://github.com/Vshal-Kumar/QRYPTONEX.git
-cd QRYPTONEX
+# 1. Clone QSEAL
+git clone https://github.com/Vshal-Kumar/QSEAL.git
+cd QSEAL
 
 # 2. Clone liboqs into the project tree
 git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git liboqs
@@ -430,17 +430,17 @@ Hardcoded IP addresses have been completely eliminated. All binaries resolve ser
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │ 1. Explicit CLI Target (IPv4, Hostname, or Tailscale MagicDNS name)    │
-│    e.g., ./client 10.58.3.114  or  ./client nexqor-server              │
+│    e.g., ./client 10.58.3.114  or  ./client qseal-server              │
 └──────────────────────────────────┬─────────────────────────────────────┘
                                    │ (if omitted)
 ┌──────────────────────────────────▼─────────────────────────────────────┐
-│ 2. Environment Variables (PQC_SERVER_IP, SERVER_IP, NEXQOR_SERVER)    │
+│ 2. Environment Variables (PQC_SERVER_IP, SERVER_IP, QSEAL_SERVER)    │
 │    e.g., export PQC_SERVER_IP="100.104.77.63"                          │
 └──────────────────────────────────┬─────────────────────────────────────┘
                                    │ (if not set)
 ┌──────────────────────────────────▼─────────────────────────────────────┐
 │ 3. System & Local Discovery Files                                      │
-│    Reads /tmp/nexqor_server.ip or ./server_endpoint.info published     │
+│    Reads /tmp/qseal_server.ip or ./server_endpoint.info published     │
 │    automatically by the running server.                                │
 └──────────────────────────────────┬─────────────────────────────────────┘
                                    │ (if running on a remote device)
@@ -458,7 +458,7 @@ Hardcoded IP addresses have been completely eliminated. All binaries resolve ser
 ---
 
 ### Topology 1: Localhost (Same Machine)
-No arguments are required. The server publishes endpoints to `/tmp/nexqor_server.ip` and clients connect automatically:
+No arguments are required. The server publishes endpoints to `/tmp/qseal_server.ip` and clients connect automatically:
 ```bash
 # Terminal 1: Server
 ./server
@@ -526,7 +526,7 @@ For connecting across different networks (e.g., Server at home/office, Client on
 
 **Startup Banner:**
 ```text
-[18:31:18] NEXQOR — Post-Quantum Secure Server
+[18:31:18] QSEAL — Post-Quantum Secure Server
   Protocol : ML-KEM-768 + ML-DSA-65 + ChaCha20-Poly1305
   Address  : 0.0.0.0:9877  |  Max clients: 4096
   Active Endpoints (Auto-Discovered & Published):
@@ -697,11 +697,11 @@ make test
 
 **Automated Test Suite Output:**
 ```text
-=== Running NEXQOR Automated Security and Unit Test Suite ===
+=== Running QSEAL Automated Security and Unit Test Suite ===
 ./tests/test_suite
 
 ╔══════════════════════════════════════════════════════════════╗
-║       NEXQOR — Post-Quantum Security & Cryptographic Tests   ║
+║       QSEAL — Post-Quantum Security & Cryptographic Tests   ║
 ╚══════════════════════════════════════════════════════════════╝
 
 [TEST 01] test_kem_agreement_and_negative                  PASS
@@ -786,9 +786,9 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 ```bibtex
 @misc{pqc_cross_platform_evaluation_2026,
   author = {Vishal Kumar},
-  title = {NEXQOR: Cross-Platform Evaluation of Scalable Post-Quantum Secure Communication},
+  title = {QSEAL: Cross-Platform Evaluation of Scalable Post-Quantum Secure Communication},
   year = {2026},
   publisher = {GitHub},
-  howpublished = {\url{https://github.com/Vshal-Kumar/QRYPTONEX}}
+  howpublished = {\url{https://github.com/Vshal-Kumar/QSEAL}}
 }
 ```

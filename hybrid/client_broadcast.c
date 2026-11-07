@@ -306,7 +306,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("\n\033[1;36m╔══════════════════════════════════════════════════════════════════════════╗\033[0m\n");
-    printf("\033[1;36m║   QRYPTONEX — Hybrid IoT Telemetry Broadcaster                           ║\033[0m\n");
+    printf("\033[1;36m║   QSEAL — Hybrid IoT Telemetry Broadcaster                           ║\033[0m\n");
     printf("\033[1;36m║   Suite: X25519 + ML-KEM-768 + Ed25519 + ML-DSA-65 + ChaCha20-Poly1305    ║\033[0m\n");
     printf("\033[1;36m╚══════════════════════════════════════════════════════════════════════════╝\033[0m\n");
     printf("  \033[1;33m• Server Target   :\033[0m %s:%d\n", server_ip, SERVER_PORT);

@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    perf_ui_print_section_header("QRYPTONEX HYBRID SUITE: N-RUN BENCHMARK (X25519+MLKEM768 / ED25519+MLDSA65)");
+    perf_ui_print_section_header("QSEAL HYBRID SUITE: N-RUN BENCHMARK (X25519+MLKEM768 / ED25519+MLDSA65)");
     printf("  Benchmark Setup: %d rounds per run across %d completed runs\n", rounds, runs);
     if (session.temp.available) {
         printf("  Hardware Sensor: %s (%s) — Initial Temp: %.2f °C\n",
@@ -484,7 +484,7 @@ int main(int argc, char *argv[]) {
         {"8. AEAD Symmetric Decryption (1KB)", stat_aead_dec.mean, stat_aead_dec.p95, stat_aead_dec.throughput_ops_sec, 1024, "pt"},
         {"9. Full 4-Way Handshake Simulation", stat_hs_full.mean, stat_hs_full.p95, stat_hs_full.throughput_ops_sec, 13090, "net"}
     };
-    perf_ui_print_unified_comparison_table("QRYPTONEX Hybrid Suite (X25519+MLKEM768, Ed25519+MLDSA65)", comparison_ops, 9);
+    perf_ui_print_unified_comparison_table("QSEAL Hybrid Suite (X25519+MLKEM768, Ed25519+MLDSA65)", comparison_ops, 9);
 
     if (export_path) {
         perf_export_json(export_path, "Hybrid Cryptographic Suite (X25519+MLKEM768, Ed25519+MLDSA65)",

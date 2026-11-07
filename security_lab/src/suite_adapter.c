@@ -86,12 +86,12 @@ int suite_adapter_init(suite_adapter_t *adapter, suite_type_t suite,
     switch (suite) {
         case SUITE_TYPE_CLASSICAL:
             strncpy(adapter->name, "QSEAL Core Production Engine", sizeof(adapter->name) - 1);
-            strncpy(adapter->description, "QSEAL Independent Secure Networking Engine (securecomm/bin/qseal)", sizeof(adapter->description) - 1);
+            strncpy(adapter->description, "QSEAL Independent Secure Networking Engine (qseal/bin/qseal)", sizeof(adapter->description) - 1);
             strncpy(adapter->crypto_stack, "QSEAL Adaptive / Hybrid / Pure PQC", sizeof(adapter->crypto_stack) - 1);
             adapter->target_port = override_port ? override_port : 9876;
-            snprintf(adapter->server_dir, sizeof(adapter->server_dir), "%s/securecomm", cwd);
-            snprintf(adapter->server_bin, sizeof(adapter->server_bin), "%s/securecomm/bin/qseal", cwd);
-            snprintf(adapter->client_bin, sizeof(adapter->client_bin), "%s/securecomm/bin/qseal", cwd);
+            snprintf(adapter->server_dir, sizeof(adapter->server_dir), "%s/qseal", cwd);
+            snprintf(adapter->server_bin, sizeof(adapter->server_bin), "%s/qseal/bin/qseal", cwd);
+            snprintf(adapter->client_bin, sizeof(adapter->client_bin), "%s/qseal/bin/qseal", cwd);
             strncpy(adapter->ipc_rx_path, "/tmp/qseal_rx.sock", sizeof(adapter->ipc_rx_path) - 1);
             strncpy(adapter->ipc_tx_path, "/tmp/qseal_tx.sock", sizeof(adapter->ipc_tx_path) - 1);
             break;
@@ -111,7 +111,7 @@ int suite_adapter_init(suite_adapter_t *adapter, suite_type_t suite,
         case SUITE_TYPE_PQC:
         default:
             adapter->suite_type = SUITE_TYPE_PQC;
-            strncpy(adapter->name, "Pure Post-Quantum Cryptography Suite (NEXQOR)", sizeof(adapter->name) - 1);
+            strncpy(adapter->name, "Pure Post-Quantum Cryptography Suite (QSEAL)", sizeof(adapter->name) - 1);
             strncpy(adapter->description, "ML-KEM-768 (Kyber) + ML-DSA-65 (Dilithium) + ChaCha20-Poly1305 + SHAKE-256", sizeof(adapter->description) - 1);
             strncpy(adapter->crypto_stack, "NIST FIPS 203 & 204 Pure PQC", sizeof(adapter->crypto_stack) - 1);
             adapter->target_port = override_port ? override_port : PORT_PQC;
@@ -240,7 +240,7 @@ int suite_adapter_probe_health(suite_adapter_t *adapter, double *out_rtt_us) {
     /* Build Discovery Probe frame */
     int pkt_len = pkt_build_frame(probe_pkt, sizeof(probe_pkt),
                                   0, PKT_DISCOVERY_PROBE, 0,
-                                  (const uint8_t *)"NEXQOR_PROBE", 12);
+                                  (const uint8_t *)"QSEAL_PROBE", 12);
     if (pkt_len < 0) return -1;
 
     struct timespec t0, t1;

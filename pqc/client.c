@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
     }
 
     printf("\n\033[1;36m╔══════════════════════════════════════════════════════════════════════════╗\033[0m\n");
-    printf("\033[1;36m║       QRYPTONEX — Post-Quantum Secure Client (NEXQOR Architecture)       ║\033[0m\n");
+    printf("\033[1;36m║       QSEAL — Post-Quantum Secure Client (QSEAL Architecture)       ║\033[0m\n");
     printf("\033[1;36m╚══════════════════════════════════════════════════════════════════════════╝\033[0m\n");
     printf("  \033[1;33m• Server Target   :\033[0m %s:%d\n", server_ip, SERVER_PORT);
     printf("  \033[1;33m• Network Link    :\033[0m %s\n", net_type);

@@ -1,8 +1,8 @@
 /*
  * hybrid/include/hybrid_errors.h
  *
- * Error codes and diagnostic interfaces for QRYPTONEX Hybrid Suite:
- * QRYPTONEX-HYBRID-X25519-MLKEM768-ED25519-MLDSA65
+ * Error codes and diagnostic interfaces for QSEAL Hybrid Suite:
+ * QSEAL-HYBRID-X25519-MLKEM768-ED25519-MLDSA65
  */
 
 #ifndef HYBRID_ERRORS_H

@@ -282,7 +282,7 @@ int main(int argc, char *argv[]) {
     if (g_num_msgs < 0) g_num_msgs = 0;
 
     printf("\n╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗\n");
-    printf("║                 QRYPTONEX High-Concurrency Hybrid Handshake Benchmark                                            ║\n");
+    printf("║                 QSEAL High-Concurrency Hybrid Handshake Benchmark                                            ║\n");
     printf("║  Suite: X25519 + ML-KEM-768 + Ed25519 + ML-DSA-65 + ChaCha20-Poly1305 + HKDF-SHA-384                              ║\n");
     printf("║  Clients: %-4d | Messages/Client: %-3d | Server Port: %d                                                         ║\n",
            g_num_clients, g_num_msgs, SERVER_PORT);

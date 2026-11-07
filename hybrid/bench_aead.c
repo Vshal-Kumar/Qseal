@@ -284,7 +284,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("\n╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗\n");
-    printf("║                 QRYPTONEX Hybrid Suite — ChaCha20-Poly1305 AEAD Benchmark                                        ║\n");
+    printf("║                 QSEAL Hybrid Suite — ChaCha20-Poly1305 AEAD Benchmark                                        ║\n");
     printf("║  Primitive: ChaCha20-Poly1305 (RFC 8439) with 15-byte Wire Header AAD Binding                                    ║\n");
     printf("╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝\n\n");
 

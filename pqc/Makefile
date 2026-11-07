@@ -180,7 +180,7 @@ tests/test_suite: tests/test_suite.c $(SHARED_OBJS)
 	@echo "Built: tests/test_suite"
 
 test: tests/test_suite
-	@echo "=== Running NEXQOR Automated Security and Unit Test Suite ==="
+	@echo "=== Running QSEAL Automated Security and Unit Test Suite ==="
 	./tests/test_suite
 
 # ── Clean ────────────────────────────────────────────────────────

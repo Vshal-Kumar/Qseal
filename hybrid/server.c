@@ -770,7 +770,7 @@ int main(void) {
 
     printf("\033[1;36m");
     printf("╔════════════════════════════════════════════════════════════════════╗\n");
-    printf("║   QRYPTONEX Hybrid Multi-Client Server Core (v1.0)                 ║\n");
+    printf("║   QSEAL Hybrid Multi-Client Server Core (v1.0)                 ║\n");
     printf("║   Suite: X25519 + ML-KEM-768 + Ed25519 + ML-DSA-65 + ChaCha20      ║\n");
     printf("║   Port : %d | Zero-Copy Event Loop | Multi-Worker Crypto Pool    ║\n", SERVER_PORT);
     printf("╚════════════════════════════════════════════════════════════════════╝\n");

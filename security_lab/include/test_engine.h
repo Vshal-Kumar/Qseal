@@ -1,7 +1,7 @@
 /*
  * security_lab/include/test_engine.h
  *
- * Core test execution engine for the QRYPTONEX pure-C security lab.
+ * Core test execution engine for the QSEAL pure-C security lab.
  * Coordinates preflight, baseline, scenario execution, cleanup, and validation.
  */
 

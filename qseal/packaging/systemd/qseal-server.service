@@ -1,0 +1,29 @@
+[Unit]
+Description=QSEAL Quantum-Secure Server Daemon
+Documentation=https://github.com/qseal/qseal
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/qseal server start
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=65536
+RuntimeDirectory=qseal
+RuntimeDirectoryMode=0755
+
+# Security and Isolation Sandboxing
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+ReadWritePaths=/etc/qseal /var/lib/qseal /var/log/qseal /run/qseal
+
+[Install]
+WantedBy=multi-user.target
+

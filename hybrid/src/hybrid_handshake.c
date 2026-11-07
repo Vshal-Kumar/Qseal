@@ -14,8 +14,8 @@
 #include <unistd.h>
 #include <openssl/rand.h>
 
-#define HYBRID_LABEL_TRANSCRIPT_SERVER "QRYPTONEX-HYBRID-TRANSCRIPT-v1-SERVER"
-#define HYBRID_LABEL_TRANSCRIPT_CLIENT "QRYPTONEX-HYBRID-TRANSCRIPT-v1-CLIENT"
+#define HYBRID_LABEL_TRANSCRIPT_SERVER "QSEAL-HYBRID-TRANSCRIPT-v1-SERVER"
+#define HYBRID_LABEL_TRANSCRIPT_CLIENT "QSEAL-HYBRID-TRANSCRIPT-v1-CLIENT"
 
 int hybrid_handshake_init(hybrid_handshake_ctx_t *ctx,
                           hybrid_role_t role,

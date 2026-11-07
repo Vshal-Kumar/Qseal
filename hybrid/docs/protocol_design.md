@@ -1,8 +1,8 @@
-# QRYPTONEX Hybrid Protocol Specification & Architectural Design
+# QSEAL Hybrid Protocol Specification & Architectural Design
 
 ## 1. Protocol Overview
 
-The **QRYPTONEX Hybrid Cryptographic Suite** (`QRYPTONEX-HYBRID-X25519-MLKEM768-ED25519-MLDSA65`) defines a unified, defense-in-depth secure communication protocol designed to withstand both classical cryptanalytic attacks and future quantum computing threats (Harvest-Now-Decrypt-Later and quantum signature forgery).
+The **QSEAL Hybrid Cryptographic Suite** (`QSEAL-HYBRID-X25519-MLKEM768-ED25519-MLDSA65`) defines a unified, defense-in-depth secure communication protocol designed to withstand both classical cryptanalytic attacks and future quantum computing threats (Harvest-Now-Decrypt-Later and quantum signature forgery).
 
 Unlike simple wrapper architectures that layer independent handshakes sequentially, this protocol executes a single, coherent cryptographic handshake where classical and post-quantum mechanisms are tightly coupled into canonical transcript hashes, length-prefixed key material derivations, and dual signature authentication.
 
@@ -72,7 +72,7 @@ All integer fields larger than a single byte are encoded in Network Byte Order (
 |---|---|---|---|
 | `0x0000` | `version` | 2 bytes | Protocol version: `0x0100` (v1.0) |
 | `0x0002` | `suite_id_len` | 2 bytes | Length of Suite ID string (`0x0031` = 49) |
-| `0x0004` | `suite_id` | 49 bytes | `"QRYPTONEX-HYBRID-X25519-MLKEM768-ED25519-MLDSA65"` |
+| `0x0004` | `suite_id` | 49 bytes | `"QSEAL-HYBRID-X25519-MLKEM768-ED25519-MLDSA65"` |
 | `0x0035` | `client_nonce` | 32 bytes | Cryptographically secure random nonce |
 | `0x0055` | `client_eph_x25519_pk` | 32 bytes | Ephemeral X25519 curve point |
 | `0x0075` | `client_eph_mlkem_pk` | 1,184 bytes | ML-KEM-768 encapsulation public key |
@@ -124,7 +124,7 @@ The Server Transcript covers all key establishment material and identity public 
 $$\text{Transcript}_{\text{Server}} = \text{Label}_{\text{Server}} \parallel \text{version} \parallel \text{len}(\text{suite}) \parallel \text{suite} \parallel N_c \parallel N_s \parallel \text{sid} \parallel PK_{x25519}^c \parallel PK_{\text{kem}}^c \parallel PK_{x25519}^s \parallel CT_{\text{kem}}^s \parallel ID_{\text{ed}}^c \parallel ID_{\text{dsa}}^c \parallel ID_{\text{ed}}^s \parallel ID_{\text{dsa}}^s$$
 
 Where:
-- $\text{Label}_{\text{Server}} = \text{"QRYPTONEX-HYBRID-TRANSCRIPT-v1-SERVER"}$ (37 bytes)
+- $\text{Label}_{\text{Server}} = \text{"QSEAL-HYBRID-TRANSCRIPT-v1-SERVER"}$ (37 bytes)
 - $N_c, N_s$: Client and Server 32-byte nonces
 - $\text{sid}$: 64-bit Big-Endian Session ID
 - Digest: $\text{Digest}_{\text{Server}} = \text{SHA-384}(\text{Transcript}_{\text{Server}})$ (48 bytes)
@@ -138,7 +138,7 @@ The Client Transcript authenticates the client's agreement to the server's param
 $$\text{Transcript}_{\text{Client}} = \text{Label}_{\text{Client}} \parallel \text{Digest}_{\text{Server}} \parallel \text{server\_sig}$$
 
 Where:
-- $\text{Label}_{\text{Client}} = \text{"QRYPTONEX-HYBRID-TRANSCRIPT-v1-CLIENT"}$ (37 bytes)
+- $\text{Label}_{\text{Client}} = \text{"QSEAL-HYBRID-TRANSCRIPT-v1-CLIENT"}$ (37 bytes)
 - Digest: $\text{Digest}_{\text{Client}} = \text{SHA-384}(\text{Transcript}_{\text{Client}})$ (48 bytes)
 
 The client signs $\text{Digest}_{\text{Client}}$ using both $SK_{\text{ed}}^c$ and $SK_{\text{dsa}}^c$.
@@ -171,8 +171,8 @@ $$\text{Key}_{\text{C2S}} = \text{HKDF-Expand}(\text{PRK}, \text{Label}_{\text{C
 $$\text{Key}_{\text{S2C}} = \text{HKDF-Expand}(\text{PRK}, \text{Label}_{\text{S2C}} \parallel N_c \parallel N_s \parallel \text{sid}, 32)$$
 
 Where:
-- $\text{Label}_{\text{C2S}} = \text{"QRYPTONEX-HYBRID-v1-C2S-KEY"}$ (27 bytes)
-- $\text{Label}_{\text{S2C}} = \text{"QRYPTONEX-HYBRID-v1-S2C-KEY"}$ (27 bytes)
+- $\text{Label}_{\text{C2S}} = \text{"QSEAL-HYBRID-v1-C2S-KEY"}$ (27 bytes)
+- $\text{Label}_{\text{S2C}} = \text{"QSEAL-HYBRID-v1-S2C-KEY"}$ (27 bytes)
 - Directional keys are strictly independent ($\text{Key}_{\text{C2S}} \neq \text{Key}_{\text{S2C}}$).
 
 ---

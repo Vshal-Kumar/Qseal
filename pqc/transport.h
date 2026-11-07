@@ -50,7 +50,7 @@ void     now_hms(char *buf, int sz);
 #define SERVER_PORT 9877
 #define DEFAULT_SERVER_ADDR "127.0.0.1"
 #define SERVER_DISCOVERY_FILE "server_endpoint.info"
-#define SERVER_DISCOVERY_SYS_FILE "/tmp/nexqor_server.ip"
+#define SERVER_DISCOVERY_SYS_FILE "/tmp/qseal_server.ip"
 #define ENV_SERVER_IP "PQC_SERVER_IP"
 
 /* ── Packet types ────────────────────────────────────────────────── */

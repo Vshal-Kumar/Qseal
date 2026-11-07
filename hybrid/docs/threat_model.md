@@ -1,8 +1,8 @@
-# QRYPTONEX Hybrid Threat Model & Security Evaluation
+# QSEAL Hybrid Threat Model & Security Evaluation
 
 ## 1. Scope & Objective
 
-This threat model evaluates the security posture of the **QRYPTONEX Hybrid Cryptographic Suite** (`QRYPTONEX-HYBRID-X25519-MLKEM768-ED25519-MLDSA65`). The system is evaluated against an active network adversary capable of intercepting, replaying, injecting, reordering, and corrupting network traffic, as well as storing encrypted sessions for future decryption using cryptanalytically relevant quantum computers (CRQCs).
+This threat model evaluates the security posture of the **QSEAL Hybrid Cryptographic Suite** (`QSEAL-HYBRID-X25519-MLKEM768-ED25519-MLDSA65`). The system is evaluated against an active network adversary capable of intercepting, replaying, injecting, reordering, and corrupting network traffic, as well as storing encrypted sessions for future decryption using cryptanalytically relevant quantum computers (CRQCs).
 
 ---
 
@@ -40,7 +40,7 @@ This threat model evaluates the security posture of the **QRYPTONEX Hybrid Crypt
 - **Threat**: An active attacker intercepts `CLIENT_HELLO` and rewrites the version field or substitutes the cipher suite identifier with a classical-only suite (e.g. X25519-AES128-CCM) to force the parties into a vulnerable mode.
 - **Mitigation**:
   1. The server strictly rejects any offered version other than `0x0100` with `HYBRID_ERR_VERSION_UNSUPPORTED`.
-  2. The server strictly rejects any suite other than `QRYPTONEX-HYBRID-X25519-MLKEM768-ED25519-MLDSA65` with `HYBRID_ERR_DOWNGRADE_DETECTED`.
+  2. The server strictly rejects any suite other than `QSEAL-HYBRID-X25519-MLKEM768-ED25519-MLDSA65` with `HYBRID_ERR_DOWNGRADE_DETECTED`.
   3. The version and suite ID are explicitly hashed into the canonical Server Transcript. Any tampering causes the Server Transcript Digest to diverge, resulting in dual signature verification failure.
 
 ### 3.3 Replay Attacks

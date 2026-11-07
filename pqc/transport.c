@@ -1,5 +1,5 @@
 /*
- * transport.c — Hardened Low-latency UDP transport for NEXQOR / QRYPTONEX
+ * transport.c — Hardened Low-latency UDP transport for QSEAL / QSEAL
  *
  * Implements:
  *  - Directional traffic keys (tx_key and rx_key separation)
@@ -681,7 +681,7 @@ int server_publish_endpoints(char *lan_ip, size_t lan_len,
   /* Publish to local discovery file */
   FILE *f = fopen(SERVER_DISCOVERY_FILE, "w");
   if (f) {
-    fprintf(f, "# NEXQOR / QRYPTONEX Active Server Endpoints\n");
+    fprintf(f, "# QSEAL / QSEAL Active Server Endpoints\n");
     fprintf(f, "PORT=%d\n", SERVER_PORT);
     fprintf(f, "LOCAL=127.0.0.1\n");
     if (best_lan[0] != '\0')
@@ -712,17 +712,17 @@ int resolve_server_address(const char *input_target, struct sockaddr_in *out_pee
     snprintf(candidate, sizeof(candidate), "%s", input_target);
   }
 
-  /* Priority 2: Environment variables (PQC_SERVER_IP, SERVER_IP, NEXQOR_SERVER) */
+  /* Priority 2: Environment variables (PQC_SERVER_IP, SERVER_IP, QSEAL_SERVER) */
   if (candidate[0] == '\0') {
     const char *env_ip = getenv(ENV_SERVER_IP);
     if (!env_ip || env_ip[0] == '\0') env_ip = getenv("SERVER_IP");
-    if (!env_ip || env_ip[0] == '\0') env_ip = getenv("NEXQOR_SERVER");
+    if (!env_ip || env_ip[0] == '\0') env_ip = getenv("QSEAL_SERVER");
     if (env_ip && env_ip[0] != '\0') {
       snprintf(candidate, sizeof(candidate), "%s", env_ip);
     }
   }
 
-  /* Priority 3: Local system discovery file (/tmp/nexqor_server.ip or ./server_endpoint.info) */
+  /* Priority 3: Local system discovery file (/tmp/qseal_server.ip or ./server_endpoint.info) */
   if (candidate[0] == '\0') {
     FILE *f = fopen(SERVER_DISCOVERY_SYS_FILE, "r");
     if (f) {

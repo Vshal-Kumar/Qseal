@@ -38,7 +38,6 @@ QSEAL operates **completely autonomously without dependencies on Tailscale, thir
 - [Debian Packaging & Systemd Services](#debian-packaging--systemd-services)
 - [Empirical Performance & Microbenchmark Results](#empirical-performance--microbenchmark-results)
 - [Automated Verification & Test Suites](#automated-verification--test-suites)
-- [Optional GTK 4 Security Lab Console](#optional-gtk-4-security-lab-console)
 - [Repository Organization & Hygiene](#repository-organization--hygiene)
 
 ---
@@ -104,7 +103,7 @@ Pure PQC Mode operates strictly using standardized lattice-based post-quantum cr
 
 - During the cryptographic handshake, the client presents its supported profile list in `PKT_CLIENT_HELLO`.
 - The server evaluates the requested profiles against its administrator-configured policy (`server.json`).
-- If no mutual post-quantum profile is permitted, the server terminates the handshake with `SECURECOMM_ERR_POLICY_REJECTED`.
+- If no mutual post-quantum profile is permitted, the server terminates the handshake with `QSEAL_ERR_POLICY_REJECTED`.
 - **Anti-Downgrade Invariant**: The platform **never silently downgrades** to unauthenticated or classical-only configurations. The negotiated parameters form part of the signed transcript, making MITM downgrade attacks mathematically detectable.
 
 ---
@@ -153,11 +152,11 @@ QSEAL includes an integrated network categorization engine executed during onboa
 
 ```
 QHack / QSEAL Platform Root
-├── securecomm/                  # Authoritative QSEAL Core Engine & Production Binaries
+├── qseal/                  # Authoritative QSEAL Core Engine & Production Binaries
 │   ├── bin/
 │   │   ├── qseal                # Primary Unified Multi-Tool Executable
-│   │   └── securecomm           # Compatibility Symlink
-│   ├── include/securecomm/      # Public C API Headers (server, client, config, crypto)
+│   │   └── qseal           # Compatibility Symlink
+│   ├── include/qseal/      # Public C API Headers (server, client, config, crypto)
 │   ├── src/
 │   │   ├── server/server.c      # Multi-Client UDP Engine with sliding replay & routing
 │   │   ├── client/client.c      # Bidirectional Client Engine with interactive console
@@ -380,7 +379,7 @@ QSEAL builds native `.deb` packages for production Debian, Ubuntu, Linux Mint, a
 make package
 ```
 
-Generated packages in `securecomm/packaging/debian/`:
+Generated packages in `qseal/packaging/debian/`:
 - `qseal-amd64.deb`: 64-bit x86 servers, desktops, cloud VMs.
 - `qseal-arm64.deb`: Raspberry Pi 4/5, NVIDIA Jetson, AWS Graviton.
 - `qseal-arm32.deb`: Raspberry Pi 2/3 running 32-bit Raspbian (`armhf`).
@@ -389,7 +388,7 @@ Generated packages in `securecomm/packaging/debian/`:
 
 ```bash
 # Install package:
-sudo dpkg -i securecomm/packaging/debian/qseal-amd64.deb
+sudo dpkg -i qseal/packaging/debian/qseal-amd64.deb
 
 # Package post-installation automatically sets strict permissions:
 # - /etc/qseal      -> 0700 (Owner: root)
@@ -447,10 +446,10 @@ QSEAL includes a comprehensive hierarchy of automated regression, safety, and in
 
 ```bash
 # 1. Run QSEAL Core Engine Unit Tests:
-make -C securecomm unit_tests
+make -C qseal unit_tests
 
 # 2. Run Real UDP Client-Server Integration Tests:
-make -C securecomm integration_tests
+make -C qseal integration_tests
 
 # 3. Run Security & Safety Guard Allowlist Verification:
 make -C security_lab test
@@ -460,19 +459,6 @@ make test
 ```
 
 All test suites execute against live cryptographic primitives and real network sockets without mock stubs.
-
----
-
-## Optional GTK 4 Security Lab Console
-
-While QSEAL is completely headless and requires no GUI to function, a pure-C GTK 4 Security & Attack Lab console is optionally available for interactive security scenario execution:
-
-```bash
-# Build and run GTK 4 Security & Attack Lab Console:
-./run_attack_ui.sh
-```
-
-- **Headless Guarantee**: Server-client communication operates 100% independently via `qseal server start` and `qseal client connect` without any graphical dependencies.
 
 ---
 

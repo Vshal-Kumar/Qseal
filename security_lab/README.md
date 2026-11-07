@@ -1,11 +1,11 @@
-# NEXQOR Security Evaluation & Resilience Testing Framework (`security_lab`)
+# QSEAL Security Evaluation & Resilience Testing Framework (`security_lab`)
 
 A unified, pure-C security evaluation engine for Linux designed to test and benchmark secure UDP communication stacks under real network conditions.
 
 Evaluates three cryptographic implementations:
 1. **Classical IoT Suite:** X25519 + Ed25519 + AES-128-CCM + SHA-256
 2. **Hybrid Quantum-Safe Suite:** Dual X25519/ML-KEM-768 + Dual Ed25519/ML-DSA-65 + ChaCha20-Poly1305 + SHA-384
-3. **Pure Post-Quantum Suite (NEXQOR):** ML-KEM-768 + ML-DSA-65 + ChaCha20-Poly1305 + SHAKE-256
+3. **Pure Post-Quantum Suite (QSEAL):** ML-KEM-768 + ML-DSA-65 + ChaCha20-Poly1305 + SHAKE-256
 
 ---
 

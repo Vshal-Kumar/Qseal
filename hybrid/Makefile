@@ -1,5 +1,5 @@
-# hybrid/Makefile — QRYPTONEX Hybrid Cryptographic Suite [x86_64]
-# Suite ID: QRYPTONEX-HYBRID-X25519-MLKEM768-ED25519-MLDSA65
+# hybrid/Makefile — QSEAL Hybrid Cryptographic Suite [x86_64]
+# Suite ID: QSEAL-HYBRID-X25519-MLKEM768-ED25519-MLDSA65
 #
 # Primitives:
 #   - Classical KEX:       X25519 (RFC 7748) via OpenSSL 3.x EVP
@@ -158,7 +158,7 @@ tests/%: tests/%.c $(LIB_STATIC) $(LOCAL_SHARED_OBJS)
 
 test: $(TEST_BINS)
 	@echo "╔════════════════════════════════════════════════════════════════╗"
-	@echo "║      QRYPTONEX Hybrid Suite Automated Regression Test Suite    ║"
+	@echo "║      QSEAL Hybrid Suite Automated Regression Test Suite    ║"
 	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@for t in $(TEST_BINS); do \
 		echo "Running $$t..."; \

@@ -25,7 +25,7 @@ int report_write_comparison_md(const run_metadata_t *meta,
     localtime_r(&meta->timestamp, &tm_buf);
     strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", &tm_buf);
 
-    fprintf(f, "# QRYPTONEX Security Evaluation & Multi-Suite Comparison Report\n\n");
+    fprintf(f, "# QSEAL Security Evaluation & Multi-Suite Comparison Report\n\n");
     fprintf(f, "**Execution ID:** `%s`  \n", meta->run_id);
     fprintf(f, "**Timestamp:** `%s`  \n", time_str);
     fprintf(f, "**Target Endpoint:** `%s`  \n", meta->target_ip);
@@ -72,7 +72,7 @@ int report_write_comparison_md(const run_metadata_t *meta,
     fprintf(f, "- **Server Stability:** Zero process crashes, segmentation faults, or hangs observed.\n\n");
 
     fprintf(f, "## 4. Performance & Resource Footprint Comparison\n\n");
-    fprintf(f, "| Metric | Classical IoT Suite | Hybrid Quantum-Safe | Pure Post-Quantum (NEXQOR) |\n");
+    fprintf(f, "| Metric | Classical IoT Suite | Hybrid Quantum-Safe | Pure Post-Quantum (QSEAL) |\n");
     fprintf(f, "| :--- | :--- | :--- | :--- |\n");
     fprintf(f, "| **Handshake Wire Size** | ~176 Bytes | ~6.5 KB (Requires Fragmentation) | ~5.8 KB (Requires Fragmentation) |\n");
     fprintf(f, "| **Handshake Latency** | ~1.5 - 3.2 ms | ~5.4 - 9.8 ms | ~4.2 - 7.5 ms |\n");

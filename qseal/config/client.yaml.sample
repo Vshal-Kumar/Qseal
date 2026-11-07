@@ -1,0 +1,39 @@
+# QSEAL Client Configuration File (Template)
+# Quantum-Secure Enterprise Access & Link Networking Platform
+# Place at /etc/qseal/client.yaml
+
+client:
+  id: "cli-prod-1"
+  name: "QSEAL Enterprise Client"
+  identity_path: "/var/lib/qseal/identity.key"
+
+server:
+  public_ipv4: "127.0.0.1"
+  public_ipv6: ""
+  hostname: ""
+  port: 9877
+  transport: "udp"
+  expected_server_identity: ""
+
+security:
+  allowed_profiles: "hybrid,pqc"
+  preferred_profile: "hybrid"
+  require_quantum_resistance: true
+  allow_tofu: true
+  key_path: "/var/lib/qseal/identity.key"
+  public_key_path: "/var/lib/qseal/identity.pub"
+  trust_store_path: "/var/lib/qseal/trust_store.txt"
+
+connection:
+  auto_connect: true
+  timeout_ms: 5000
+  retry_interval_sec: 5
+  reconnect_attempts: 10
+  heartbeat_interval_sec: 15
+  reconnection_policy: "exponential_backoff"
+
+logging:
+  level: "info"
+  file: "/var/log/qseal/client.log"
+  retention_days: 7
+

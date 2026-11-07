@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
     }
 
     printf("\n╔════════════════════════════════════════════════════════════════╗\n");
-    printf("║      QRYPTONEX Hybrid Cryptographic Server (Suite v1.0)        ║\n");
+    printf("║      QSEAL Hybrid Cryptographic Server (Suite v1.0)        ║\n");
     printf("║   Suite: X25519 + ML-KEM-768 + Ed25519 + ML-DSA-65 + ChaCha20  ║\n");
     printf("╚════════════════════════════════════════════════════════════════╝\n\n");
 

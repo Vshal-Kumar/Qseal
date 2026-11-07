@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "role": "server",
+  "mode": "hybrid",
+  "network": {
+    "bind_address": "0.0.0.0",
+    "server_host": "127.0.0.1",
+    "port": 9877,
+    "advertised_endpoint": "",
+    "allow_client_to_client": true,
+    "heartbeat_interval_sec": 15,
+    "session_timeout_sec": 60,
+    "connection_timeout_ms": 5000
+  },
+  "identity": {
+    "device_id": "qseal-node-1",
+    "private_key_path": "/etc/qseal/qseal-node-1.key",
+    "public_key_path": "/etc/qseal/qseal-node-1.pub",
+    "trust_store_path": "/etc/qseal/trust_store.txt",
+    "expected_server_id": ""
+  },
+  "policy": {
+    "require_quantum_resistance": true,
+    "allow_classical_fallback": false,
+    "preference": "high_security",
+    "allow_tofu": true
+  },
+  "resources": {
+    "max_sessions": 256,
+    "max_buffer_kb": 64
+  },
+  "logging": {
+    "level": "INFO",
+    "structured": true
+  }
+}
+

@@ -87,7 +87,7 @@ void kem_derive_directional_keys(uint8_t client_write_key[TRAFFIC_KEY_BYTES],
 
   /* 1. Client-to-Server traffic key */
   EVP_DigestInit_ex(tls_shake256_ctx, EVP_shake256(), NULL);
-  EVP_DigestUpdate(tls_shake256_ctx, "NEXQOR-KDF-C2S", 14);
+  EVP_DigestUpdate(tls_shake256_ctx, "QSEAL-KDF-C2S", 14);
   EVP_DigestUpdate(tls_shake256_ctx, ss, KEM_SS_BYTES);
   EVP_DigestUpdate(tls_shake256_ctx, c_nonce, 16);
   EVP_DigestUpdate(tls_shake256_ctx, s_nonce, 16);
@@ -96,7 +96,7 @@ void kem_derive_directional_keys(uint8_t client_write_key[TRAFFIC_KEY_BYTES],
 
   /* 2. Server-to-Client traffic key */
   EVP_DigestInit_ex(tls_shake256_ctx, EVP_shake256(), NULL);
-  EVP_DigestUpdate(tls_shake256_ctx, "NEXQOR-KDF-S2C", 14);
+  EVP_DigestUpdate(tls_shake256_ctx, "QSEAL-KDF-S2C", 14);
   EVP_DigestUpdate(tls_shake256_ctx, ss, KEM_SS_BYTES);
   EVP_DigestUpdate(tls_shake256_ctx, c_nonce, 16);
   EVP_DigestUpdate(tls_shake256_ctx, s_nonce, 16);

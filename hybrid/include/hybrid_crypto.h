@@ -2,7 +2,7 @@
  * hybrid/include/hybrid_crypto.h
  *
  * Core definitions and cryptographic interface declarations for:
- * QRYPTONEX-HYBRID-X25519-MLKEM768-ED25519-MLDSA65
+ * QSEAL-HYBRID-X25519-MLKEM768-ED25519-MLDSA65
  */
 
 #ifndef HYBRID_CRYPTO_H
@@ -17,8 +17,8 @@ extern "C" {
 #endif
 
 /* ── Protocol & Suite Constants ───────────────────────────────────── */
-#define HYBRID_SUITE_ID                "QRYPTONEX-HYBRID-X25519-MLKEM768-ED25519-MLDSA65"
-#define HYBRID_SUITE_ID_LEN            49
+#define HYBRID_SUITE_ID                "QSEAL-HYBRID-X25519-MLKEM768-ED25519-MLDSA65"
+#define HYBRID_SUITE_ID_LEN            45
 
 #define HYBRID_PROTOCOL_VERSION_MAJOR  1
 #define HYBRID_PROTOCOL_VERSION_MINOR  0

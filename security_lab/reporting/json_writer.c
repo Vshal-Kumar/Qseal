@@ -72,7 +72,7 @@ int report_write_metadata_json(const run_metadata_t *meta) {
     fprintf(f, "  \"architecture\": \"%s\",\n", meta->host_arch);
     fprintf(f, "  \"operating_system\": \"%s\",\n", meta->os_info);
     fprintf(f, "  \"compiler\": \"%s\",\n", meta->compiler_info);
-    fprintf(f, "  \"framework\": \"QRYPTONEX C Security Testing Framework (Pure C)\"\n");
+    fprintf(f, "  \"framework\": \"QSEAL C Security Testing Framework (Pure C)\"\n");
     fprintf(f, "}\n");
 
     fclose(f);

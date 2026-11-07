@@ -1,5 +1,5 @@
 /*
- * bench_pqc.c — QRYPTONEX Multi-Suite Cryptographic Benchmark & Comparison Framework
+ * bench_pqc.c — QSEAL Multi-Suite Cryptographic Benchmark & Comparison Framework
  *
  * Comprehensive Comparative Evaluation:
  *   1. Classical IoT Suite:     X25519 + Ed25519 + AES-128-CCM + SHA-256 + HKDF
@@ -476,7 +476,7 @@ static void render_table_6_executive_summary(const suite_metrics_t *c, const sui
     printf("║ 2. NETWORK TRANSMISSION & PACKET OVERHEAD:                                                                          ║\n");
     printf("║    • Classical IoT uses only 296 bytes for a complete 4-way mutual authentication handshake.                        ║\n");
     printf("║    • Pure PQC requires 12,834 bytes (~43.4x overhead), which exceeds standard Ethernet MTU (1500 B) and requires    ║\n");
-    printf("║      the sliding-window reassembly layer implemented in QRYPTONEX transport.                                        ║\n");
+    printf("║      the sliding-window reassembly layer implemented in QSEAL transport.                                           ║\n");
     printf("║                                                                                                                     ║\n");
     printf("║ 3. MEMORY & RUNTIME FOOTPRINT:                                                                                      ║\n");
     printf("║    • All three suites operate with minimal resident memory (RSS < 8 MB, Heap < 1 MB) on embedded Linux devices.     ║\n");
@@ -515,7 +515,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("\n╔═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗\n");
-    printf("║              QRYPTONEX MULTI-SUITE CRYPTOGRAPHIC BENCHMARK & COMPARISON FRAMEWORK                                   ║\n");
+    printf("║                 QSEAL MULTI-SUITE CRYPTOGRAPHIC BENCHMARK & COMPARISON FRAMEWORK                                   ║\n");
     printf("║              Empirical Evaluation of Classical vs. Hybrid vs. Pure Post-Quantum Cryptography                        ║\n");
     printf("╠═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣\n");
     printf("║ Benchmark Parameters: %3d rounds per run across %2d runs (Total: %5d operations per primitive)                     ║\n",
@@ -539,9 +539,9 @@ int main(int argc, char *argv[]) {
 
     char tmp_c[64], tmp_h[64], tmp_p[64];
     pid_t pid = getpid();
-    snprintf(tmp_c, sizeof(tmp_c), "/tmp/qryptonex_bench_c_%d.json", (int)pid);
-    snprintf(tmp_h, sizeof(tmp_h), "/tmp/qryptonex_bench_h_%d.json", (int)pid);
-    snprintf(tmp_p, sizeof(tmp_p), "/tmp/qryptonex_bench_p_%d.json", (int)pid);
+    snprintf(tmp_c, sizeof(tmp_c), "/tmp/qseal_bench_c_%d.json", (int)pid);
+    snprintf(tmp_h, sizeof(tmp_h), "/tmp/qseal_bench_h_%d.json", (int)pid);
+    snprintf(tmp_p, sizeof(tmp_p), "/tmp/qseal_bench_p_%d.json", (int)pid);
 
     char cmd_c[256], cmd_h[256], cmd_p[256];
     if (verbose) {

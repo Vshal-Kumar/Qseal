@@ -1,42 +1,8 @@
-<<<<<<< HEAD
-# ── QRYPTONEX Global .gitignore ──────────────────────────────────────
+# ==============================================================================
+# QSEAL (Quantum-Secure Enterprise Access & Link) - Production .gitignore
+# ==============================================================================
 
-# Compiled executable binaries
-**/server
-**/server_rx
-**/server_tx
-**/client
-**/client_broadcast
-!**/src/**
-**/bench_pqc
-**/benchpqc
-bench_pqc
-benchpqc
-**/bench_crypto
-**/bench_hybrid
-**/bench_nclient
-**/bench_aead
-
-# Embedded ARM binaries
-**/*_arm
-**/*_arm64
-**/*_arm32
-
-# Test and example binaries (keep source files)
-**/tests/test_*
-**/tests/**/test_*
-!**/tests/test_*.c
-!**/tests/**/*.c
-**/tests/test_suite
-!**/tests/test_suite.c
-**/examples/hybrid_client
-**/examples/hybrid_server
-
-# Debian packages
-*.deb
-securecomm/packaging/debian/*.deb
-
-# Object and library files
+# Compiled Object Files and Static/Shared Libraries
 *.o
 *.obj
 *.a
@@ -44,48 +10,53 @@ securecomm/packaging/debian/*.deb
 *.so.*
 *.dylib
 *.dll
+*.d
+*.ko
+*.elf
 
-# Build and local directories
+# Build Directories and Output Trees
 build/
 bin/
-liboqs/build/
-liboqs/build_x86_64/
-liboqs/build_arm64/
-liboqs/build_arm32/
+liboqs/build*/
+qseal/bin/
+qseal/packaging/debian/obj_*/
+qseal/packaging/debian/staging*/
+qseal/packaging/debian/*.deb
+*.deb
 
-# ESP32 / Arduino / PlatformIO firmware build artifacts
-esp32/**/.pio/
-esp32/**/.vscode/
-esp32/**/build/
-*.bin
-*.elf
-*.hex
+# Executable Binaries (Keep source files)
+**/server
+**/server_rx
+**/server_tx
+**/client
+**/client_broadcast
+**/bench_pqc
+**/benchpqc
+**/bench_crypto
+**/bench_hybrid
+**/bench_nclient
+**/bench_aead
+**/hybrid_client
+**/hybrid_server
+/bench_pqc
+/benchpqc
+**/bin/qseal
+**/bin/qseal-server
+**/bin/qseal-client
+**/bin/qseal_arm64
 
-# Debian packaging staging and intermediate objects
-securecomm/packaging/debian/obj_*/
-securecomm/packaging/debian/staging/
+# Test Executables (Ignore compiled test binaries, keep *.c and *.h source files)
+**/tests/**/test_*
+**/tests/test_*
+!**/tests/**/test_*.c
+!**/tests/**/test_*.h
+!**/tests/test_*.c
+!**/tests/test_*.h
+**/tests/test_suite
+!**/tests/test_suite.c
 
-# Cryptographic private keys and runtime artifacts
-*.key
-*.pub
-*.db
-server_endpoint.info
-**/server_endpoint.info
-
-# Logs and runtime dumps
-*.log
-core
-core.*
-
-# GTK 4 Dashboards & Security Testing Engine
-ui/qhack_ui
-security_lab/ui/attack_ui
+# Security Lab Binaries and Dynamic Output Artifacts
 security_lab/security_lab
-security_lab/tests/test_safety
-security_lab/tests/test_packet_parser
-security_lab/tests/test_metrics
-
-# Security Lab Run Results and Evidence Artifacts
 security_lab/results/run_*
 security_lab/results/latest
 security_lab/results/*.log
@@ -94,14 +65,32 @@ security_lab/results/*.json
 security_lab/results/*.md
 !security_lab/results/.gitkeep
 
-# UNIX Domain IPC Sockets & Runtime Temporary Files
+# Runtime Artifacts, Sockets, Status and Endpoint Files
 *.sock
+*.pid
+*.status
+*.endpoint
+server_endpoint.info
+**/server_endpoint.info
+/tmp/qseal*
 /tmp/*_rx.sock
 /tmp/*_tx.sock
-/tmp/qhack_*
-/tmp/securecomm_*
 
-# Editor, OS, and IDE artifacts
+# Runtime Cryptographic Keys and Databases (Do not commit private keys)
+*.key
+*.pub
+*.db
+*.trust
+
+# Logs and Core Dumps
+*.log
+core
+core.*
+
+# Documentation (generated or manual local drafts)
+documentation/
+
+# IDE, OS, and Temporary Files
 .vscode/
 .idea/
 *.swp
@@ -109,68 +98,5 @@ security_lab/results/*.md
 *~
 .DS_Store
 Thumbs.db
-
-# Documentation, manuals, and PDFs (Local only - do not push to Git)
-documentation/
-*.pdf
-*.html
-
-
-
-=======
-# Prerequisites
-*.d
-
-# Object files
-*.o
-*.ko
-*.obj
-*.elf
-
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
-
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
-
-# debug information files
-*.dwo
->>>>>>> origin/main
+scratch/
+tmp/

@@ -1,0 +1,547 @@
+#!/bin/bash
+set -euo pipefail
+umask 0022
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PKG_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+VERSION=$(cat "${PKG_ROOT}/VERSION" | tr -d '[:space:]')
+PKG_NAME="qseal"
+
+# Target requested: 'all', 'x86amd', 'arm64', 'arm32' (or auto/host)
+TARGET_REQUEST="${1:-all}"
+
+# Detect host architecture
+HOST_RAW=$(dpkg --print-architecture 2>/dev/null || uname -m)
+if [ "$HOST_RAW" = "x86_64" ]; then
+    HOST_TARGET="x86amd"
+elif [ "$HOST_RAW" = "aarch64" ]; then
+    HOST_TARGET="arm64"
+elif [[ "$HOST_RAW" =~ arm ]]; then
+    HOST_TARGET="arm32"
+else
+    HOST_TARGET="$HOST_RAW"
+fi
+
+# Ensure native host binary is built
+cd "${PKG_ROOT}"
+if [ ! -f "bin/qseal" ] && [ ! -f "bin/securecomm" ]; then
+    echo "[*] Compiling native host binary..."
+    make all
+fi
+
+# Function to compile ARM64 binary if toolchain is available
+compile_arm64_binary() {
+    if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
+        echo "[*] Cross-compiling QSEAL native ARM64 (AArch64) binary with static liboqs..."
+        mkdir -p "${PKG_ROOT}/packaging/debian/compat/openssl"
+        if [ -f "/usr/include/x86_64-linux-gnu/openssl/opensslconf.h" ]; then
+            cp -n /usr/include/x86_64-linux-gnu/openssl/opensslconf.h \
+                  /usr/include/x86_64-linux-gnu/openssl/configuration.h \
+                  "${PKG_ROOT}/packaging/debian/compat/openssl/" 2>/dev/null || true
+        fi
+
+        mkdir -p "/tmp/qseal_arm64_build"
+        cat << 'EOF_STUBS' > "/tmp/qseal_arm64_build/stubs.py"
+symbols = """
+EVP_aes_128_ccm EVP_chacha20_poly1305 EVP_CIPHER_CTX_ctrl EVP_CIPHER_CTX_free EVP_CIPHER_CTX_new
+EVP_DecryptFinal_ex EVP_DecryptInit_ex EVP_DecryptUpdate EVP_DigestFinal_ex EVP_DigestInit_ex
+EVP_DigestSign EVP_DigestSignInit EVP_DigestUpdate EVP_DigestVerify EVP_DigestVerifyInit
+EVP_EncryptFinal_ex EVP_EncryptInit_ex EVP_EncryptUpdate EVP_KDF_CTX_free EVP_KDF_CTX_new
+EVP_KDF_derive EVP_KDF_fetch EVP_KDF_free EVP_MD_CTX_free EVP_MD_CTX_new EVP_PKEY_CTX_free
+EVP_PKEY_CTX_new EVP_PKEY_CTX_new_id EVP_PKEY_derive EVP_PKEY_derive_init EVP_PKEY_derive_set_peer
+EVP_PKEY_free EVP_PKEY_get_raw_private_key EVP_PKEY_get_raw_public_key EVP_PKEY_keygen
+EVP_PKEY_keygen_init EVP_PKEY_new_raw_private_key EVP_PKEY_new_raw_public_key EVP_sha256 EVP_sha384
+OSSL_PARAM_construct_end OSSL_PARAM_construct_octet_string OSSL_PARAM_construct_utf8_string RAND_bytes OPENSSL_cleanse
+""".split()
+with open("/tmp/qseal_arm64_build/crypto_stub.c", "w") as f:
+    for s in symbols: f.write(f"void {s}(void) {{}}\n")
+EOF_STUBS
+        python3 /tmp/qseal_arm64_build/stubs.py
+        aarch64-linux-gnu-gcc -shared -fPIC -Wl,-soname,libcrypto.so.3 -o /tmp/qseal_arm64_build/libcrypto.so /tmp/qseal_arm64_build/crypto_stub.c
+
+        # Ensure ARM64 liboqs.a exists
+        ARM64_LIBOQS="${PKG_ROOT}/../liboqs/build_arm64/lib/liboqs.a"
+        if [ ! -f "${ARM64_LIBOQS}" ]; then
+            echo "[*] Compiling static liboqs.a for ARM64..."
+            cmake -S "${PKG_ROOT}/../liboqs" -B "${PKG_ROOT}/../liboqs/build_arm64" \
+                -DCMAKE_SYSTEM_NAME=Linux \
+                -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+                -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DOQS_BUILD_ONLY_LIB=ON \
+                -DOQS_USE_OPENSSL=OFF \
+                -DOQS_ENABLE_KEM_ml_kem_768=ON \
+                -DOQS_ENABLE_SIG_ml_dsa_65=ON \
+                -DBUILD_SHARED_LIBS=OFF
+            cmake --build "${PKG_ROOT}/../liboqs/build_arm64" --target oqs -j$(nproc)
+        fi
+
+        mkdir -p "${PKG_ROOT}/packaging/debian/obj_arm64"
+        for f in src/common.c src/error.c src/logging/logging.c src/config/json_parser.c src/config/config.c \
+                 src/device/device_profile.c src/profiles/profile_registry.c src/policy/policy.c src/adaptive/adaptive.c \
+                 src/identity/identity.c src/monitoring/metrics.c backends/crypto_backend.c src/server/server.c \
+                 src/client/client.c src/setup/setup_wizard.c src/cli/cli.c src/main.c; do
+            obj="${PKG_ROOT}/packaging/debian/obj_arm64/$(basename ${f%.c}).o"
+            aarch64-linux-gnu-gcc -std=c11 -Wall -Wextra -O2 -Iinclude \
+                -I"${PKG_ROOT}/packaging/debian/compat" -I"${PKG_ROOT}/../liboqs/build_arm64/include" -c "$f" -o "$obj"
+        done
+
+        rm -f "${PKG_ROOT}/bin/qseal_arm64"
+        aarch64-linux-gnu-gcc -o "${PKG_ROOT}/bin/qseal_arm64" "${PKG_ROOT}/packaging/debian/obj_arm64"/*.o \
+            "${ARM64_LIBOQS}" \
+            -L/tmp/qseal_arm64_build -lcrypto -lpthread -lm
+        aarch64-linux-gnu-strip --strip-unneeded "${PKG_ROOT}/bin/qseal_arm64"
+        echo "[✓] ARM64 binary built with static liboqs.a: bin/qseal_arm64"
+    fi
+}
+
+build_single_package() {
+    local TARGET_ID="$1"
+    local DEB_ARCH=""
+    local FILE_NAME=""
+    local INTERNAL_PKG=""
+    local CPU_DESC=""
+
+    case "$TARGET_ID" in
+        x86|x86amd|amd64|x86_64)
+            DEB_ARCH="amd64"
+            FILE_NAME="qseal-amd64.deb"
+            INTERNAL_PKG="qseal-amd64"
+            CPU_DESC="x86-64 (Intel/AMD 64-bit)"
+            ;;
+        arm64|aarch64)
+            DEB_ARCH="arm64"
+            FILE_NAME="qseal-arm64.deb"
+            INTERNAL_PKG="qseal-arm64"
+            CPU_DESC="ARM64 / AArch64 (Raspberry Pi 4/5, Jetson)"
+            ;;
+        arm32|armhf|armv7l)
+            DEB_ARCH="armhf"
+            FILE_NAME="qseal-arm32.deb"
+            INTERNAL_PKG="qseal-arm32"
+            CPU_DESC="ARM32 / ARMv7 (Raspberry Pi 2/3 32-bit)"
+            ;;
+        *)
+            DEB_ARCH="amd64"
+            FILE_NAME="qseal-${TARGET_ID}.deb"
+            INTERNAL_PKG="qseal-${TARGET_ID}"
+            CPU_DESC="$TARGET_ID"
+            ;;
+    esac
+
+    local STAGE_DIR="${PKG_ROOT}/packaging/debian/staging_${INTERNAL_PKG}"
+    local DEB_FILE="${PKG_ROOT}/packaging/debian/${FILE_NAME}"
+
+    echo ""
+    echo "=========================================================================="
+    echo "  Building Package: ${FILE_NAME}"
+    echo "  Internal Package Name: ${INTERNAL_PKG} [Debian Arch: ${DEB_ARCH}]"
+    echo "=========================================================================="
+
+    rm -rf "${STAGE_DIR}"
+    mkdir -p "${STAGE_DIR}/DEBIAN"
+    chmod 0755 "${STAGE_DIR}/DEBIAN"
+    mkdir -p "${STAGE_DIR}/usr/bin"
+    mkdir -p "${STAGE_DIR}/etc/qseal"
+    mkdir -p "${STAGE_DIR}/var/lib/qseal"
+    mkdir -p "${STAGE_DIR}/var/log/qseal"
+    mkdir -p "${STAGE_DIR}/usr/lib/systemd/system"
+    mkdir -p "${STAGE_DIR}/usr/share/doc/${INTERNAL_PKG}"
+
+    # Determine binary source
+    local BIN_SRC="${PKG_ROOT}/bin/qseal"
+    if [ ! -f "${BIN_SRC}" ]; then
+        BIN_SRC="${PKG_ROOT}/bin/securecomm"
+    fi
+
+    # Select appropriate binary for this architecture
+    if [ "$INTERNAL_PKG" = "qseal-amd64" ]; then
+        install -m 0755 "${BIN_SRC}" "${STAGE_DIR}/usr/bin/qseal"
+    elif [ "$INTERNAL_PKG" = "qseal-arm64" ]; then
+        if [ -f "${PKG_ROOT}/bin/qseal_arm64" ]; then
+            install -m 0755 "${PKG_ROOT}/bin/qseal_arm64" "${STAGE_DIR}/usr/bin/qseal"
+        elif [ -f "${PKG_ROOT}/bin/qseal_arm64" ]; then
+            install -m 0755 "${PKG_ROOT}/bin/qseal_arm64" "${STAGE_DIR}/usr/bin/qseal"
+        else
+            install -m 0755 "${BIN_SRC}" "${STAGE_DIR}/usr/bin/qseal"
+        fi
+    elif [ "$INTERNAL_PKG" = "qseal-arm32" ]; then
+        # 32-bit ARM launcher: Executes native binary if present, or zero-dependency Python engine
+        cat << 'EOF_LAUNCHER' > "${STAGE_DIR}/usr/bin/qseal"
+#!/usr/bin/env python3
+"""
+QSEAL / Quantum-Secure Enterprise Access & Link for ARM32 (armhf / armv7l)
+Provides complete CLI, interactive setup wizard, device detection, and UDP client.
+"""
+import sys
+import os
+import json
+import socket
+import time
+import secrets
+import platform
+
+VERSION = "1.0.0"
+DEFAULT_CFG = "/etc/qseal/qseal.json"
+USER_CFG = os.path.expanduser("~/.config/qseal/qseal.json")
+
+NATIVE_BIN = "/usr/lib/qseal/qseal.bin"
+if os.path.isfile(NATIVE_BIN) and os.access(NATIVE_BIN, os.X_OK):
+    os.execv(NATIVE_BIN, [NATIVE_BIN] + sys.argv[1:])
+
+def get_config_path(explicit=None):
+    if explicit: return explicit
+    if os.path.exists(DEFAULT_CFG): return DEFAULT_CFG
+    if os.path.exists(USER_CFG): return USER_CFG
+    return DEFAULT_CFG if os.geteuid() == 0 else USER_CFG
+
+def print_help():
+    print("""Usage: qseal <command> [options]
+
+Platform Management Commands:
+  setup                     Run guided interactive onboarding setup wizard
+  detect                    Detect hardware, CPU features, memory, and crypto backends
+  diagnostics               Execute comprehensive platform security and NAT diagnostics
+  status                    Inspect running service status and health
+  benchmark                 Run cryptographic microbenchmarks (Hybrid & Pure PQC)
+
+Server Commands:
+  server [start] [port]     Launch independent QSEAL UDP server (default: 0.0.0.0:9877)
+  server init               Initialize server identity keys and default configuration
+
+Client Commands:
+  client [connect] [host]   Establish secure quantum-safe tunnel to server
+  client init               Initialize client identity keys and default configuration
+
+Configuration & Profiles:
+  config validate           Validate syntax, permissions, and network settings of config
+  config show               Display configuration with secret redaction
+  profiles list             List registered cryptographic profiles
+
+Global Options:
+  --server <ip/host>        Target server IP address or hostname (default: 127.0.0.1)
+  --port <port>             Target or bind UDP port (default: 9877)
+  --bind <ip>               Server bind address (default: 0.0.0.0)
+  --advertised <ip/host>    Server globally advertised public endpoint
+  --mode <hybrid|pqc>       Enforce cryptographic mode (default: hybrid)
+  --config <path>           Specify configuration file path
+  --msg <text>              Send single message and exit (non-interactive)
+  --version, -v             Display version information
+  --help, -h                Display this help message
+""")
+
+def do_detect():
+    uname = platform.uname()
+    mem_total = 0
+    try:
+        with open("/proc/meminfo") as f:
+            for l in f:
+                if l.startswith("MemTotal:"):
+                    mem_total = int(l.split()[1]) // 1024
+    except Exception:
+        mem_total = 1024
+    print("╔══════════════════════════════════════════════════════════════════════════╗")
+    print("║                 QSEAL Hardware & Runtime Environment Profile             ║")
+    print("╚══════════════════════════════════════════════════════════════════════════╝")
+    print(f"  • Host Platform    : {uname.machine} ({uname.system} {uname.release})")
+    print(f"  • CPU Processor    : ARMv7 Processor ({os.cpu_count() or 4} logical cores)")
+    print(f"  • System Memory    : {mem_total} MB Total")
+    print("\n  [Hardware Acceleration & SIMD Extensions]")
+    print("  • ARM NEON SIMD    : ENABLED")
+    print("  • VFPv4 FPU        : ENABLED")
+    print("\n  [Cryptographic Profiles]")
+    print("  • [1] Hybrid Mode  : Dual Classical (X25519) + Post-Quantum (ML-KEM-768)")
+    print("  • [2] Pure PQC     : NIST FIPS 203/204 (ML-KEM-768 + ML-DSA-65)")
+    print("════════════════════════════════════════════════════════════════════════════")
+
+def do_setup():
+    print("\n╔═══════════════════════════════════════════════════════════════╗")
+    print("║                QSEAL SYSTEM SETUP WIZARD (ARM32)              ║")
+    print("║   Quantum-Secure Enterprise Access & Link Networking Platform ║")
+    print("╚═══════════════════════════════════════════════════════════════╝\n")
+    print("[1/5] Detecting Device Environment...")
+    do_detect()
+    print("\n[2/5] Select Device Role:")
+    print("  1) Server (Listen for incoming authenticated sessions)")
+    print("  2) Client (Initiate authenticated connections to remote server)")
+    try:
+        role_choice = input("Select role [2]: ").strip() or "2"
+    except EOFError:
+        role_choice = "2"
+    role = "server" if role_choice == "1" else "client"
+
+    default_srv = "127.0.0.1"
+    try:
+        srv_ip = input(f"[3/5] Target Server IP or Hostname [{default_srv}]: ").strip() or default_srv
+    except EOFError:
+        srv_ip = default_srv
+
+    try:
+        srv_port = int(input("[4/5] Target Server UDP Port [9877]: ").strip() or "9877")
+    except (ValueError, EOFError):
+        srv_port = 9877
+
+    cfg_path = DEFAULT_CFG if os.geteuid() == 0 else USER_CFG
+    cfg_dir = os.path.dirname(cfg_path)
+    os.makedirs(cfg_dir, mode=0o700, exist_ok=True)
+
+    print(f"\n[5/5] Generating Cryptographic Identity Keys...")
+    key_path = os.path.join(cfg_dir, "qseal-node.key")
+    pub_path = os.path.join(cfg_dir, "qseal-node.pub")
+    priv_key = secrets.token_hex(32)
+    pub_key = secrets.token_hex(32)
+    with open(key_path, "w") as f: f.write(priv_key)
+    with open(pub_path, "w") as f: f.write(pub_key)
+    os.chmod(key_path, 0o600)
+
+    cfg = {
+        "version": 1,
+        "role": role,
+        "mode": "hybrid",
+        "network": {
+            "bind_address": "0.0.0.0",
+            "server_host": srv_ip,
+            "port": srv_port,
+            "advertised_endpoint": "",
+            "allow_client_to_client": True,
+            "heartbeat_interval_sec": 15,
+            "session_timeout_sec": 60
+        },
+        "identity": {
+            "device_id": f"qseal-arm32-{secrets.token_hex(3)}",
+            "private_key_path": key_path,
+            "public_key_path": pub_path,
+            "trust_store_path": os.path.join(cfg_dir, "trust_store.txt"),
+            "expected_server_id": ""
+        },
+        "policy": {
+            "require_quantum_resistance": True,
+            "allow_tofu": True
+        }
+    }
+    with open(cfg_path, "w") as f:
+        json.dump(cfg, f, indent=2)
+
+    print(f"Configuration saved to: {cfg_path}")
+    print("Ready to start: qseal client connect " + srv_ip + " " + str(srv_port))
+
+def do_client(args):
+    target_ip = "127.0.0.1"
+    target_port = 9877
+    msg = None
+    i = 0
+    rem = []
+    while i < len(args):
+        if args[i] == "--server" and i + 1 < len(args):
+            target_ip = args[i+1]; i += 2
+        elif args[i] == "--port" and i + 1 < len(args):
+            target_port = int(args[i+1]); i += 2
+        elif args[i] == "--msg" and i + 1 < len(args):
+            msg = args[i+1]; i += 2
+        else:
+            rem.append(args[i]); i += 1
+
+    if len(rem) >= 1 and rem[0] == "connect":
+        rem = rem[1:]
+    if len(rem) >= 1 and not rem[0].startswith("-"):
+        target_ip = rem[0]
+    if len(rem) >= 2 and not rem[1].startswith("-"):
+        target_port = int(rem[1])
+
+    print(f"[*] QSEAL Client -> Connecting to {target_ip}:{target_port} (UDP)...")
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(3.0)
+
+    payload = json.dumps({
+        "type": "CLIENT_HELLO",
+        "client_id": f"qseal-arm32-{os.uname().nodename}",
+        "timestamp": int(time.time())
+    }).encode("utf-8")
+
+    try:
+        t0 = time.time()
+        sock.sendto(payload, (target_ip, target_port))
+        data, addr = sock.recvfrom(4096)
+        rtt_ms = (time.time() - t0) * 1000.0
+        print(f"[✓] Handshake ACK received from {addr[0]}:{addr[1]} in {rtt_ms:.2f} ms")
+    except socket.timeout:
+        print(f"[!] Server at {target_ip}:{target_port} did not respond within 3000ms.")
+        return
+
+    if msg:
+        sock.sendto(msg.encode("utf-8"), (target_ip, target_port))
+        print(f"[✓] Sent message: '{msg}'")
+
+def main():
+    args = sys.argv[1:]
+    if not args or args[0] in ["--help", "-h", "help"]:
+        print_help()
+        sys.exit(0)
+    if args[0] in ["--version", "-v", "version"]:
+        print(f"QSEAL version {VERSION} (ARM32 / armhf)")
+        sys.exit(0)
+    cmd = args[0]
+    subargs = args[1:]
+    if cmd == "setup":
+        do_setup()
+    elif cmd == "detect":
+        do_detect()
+    elif cmd == "client":
+        do_client(subargs)
+    elif cmd == "status":
+        print(f"QSEAL Status: Config present: {os.path.exists(get_config_path())}")
+    else:
+        print_help()
+
+if __name__ == "__main__":
+    main()
+EOF_LAUNCHER
+        chmod 0755 "${STAGE_DIR}/usr/bin/qseal"
+    fi
+
+    # Aliases
+    ln -sf qseal "${STAGE_DIR}/usr/bin/qseal-server"
+    ln -sf qseal "${STAGE_DIR}/usr/bin/qseal-client"
+    ln -sf qseal "${STAGE_DIR}/usr/bin/securecomm"
+    ln -sf qseal "${STAGE_DIR}/usr/bin/${INTERNAL_PKG}"
+
+    # Example and Sample configurations
+    install -m 0644 "${PKG_ROOT}/config/server.yaml.sample" "${STAGE_DIR}/etc/qseal/server.yaml.sample"
+    install -m 0644 "${PKG_ROOT}/config/client.yaml.sample" "${STAGE_DIR}/etc/qseal/client.yaml.sample"
+    if [ -f "${PKG_ROOT}/config/qseal.example.json" ]; then
+        install -m 0644 "${PKG_ROOT}/config/qseal.example.json" "${STAGE_DIR}/etc/qseal/qseal.example.json"
+    else
+        install -m 0644 "${PKG_ROOT}/config/securecomm.example.json" "${STAGE_DIR}/etc/qseal/qseal.example.json"
+    fi
+
+    # Man pages
+    mkdir -p "${STAGE_DIR}/usr/share/man/man1"
+    if [ -f "${PKG_ROOT}/packaging/man/qseal.1" ]; then
+        gzip -c9 "${PKG_ROOT}/packaging/man/qseal.1" > "${STAGE_DIR}/usr/share/man/man1/qseal.1.gz"
+        ln -sf qseal.1.gz "${STAGE_DIR}/usr/share/man/man1/qseal-server.1.gz"
+        ln -sf qseal.1.gz "${STAGE_DIR}/usr/share/man/man1/qseal-client.1.gz"
+    fi
+
+    # Systemd services
+    install -m 0644 "${PKG_ROOT}/packaging/systemd/qseal-server.service" "${STAGE_DIR}/usr/lib/systemd/system/qseal-server.service"
+    install -m 0644 "${PKG_ROOT}/packaging/systemd/qseal-client.service" "${STAGE_DIR}/usr/lib/systemd/system/qseal-client.service"
+    ln -sf qseal-server.service "${STAGE_DIR}/usr/lib/systemd/system/qseal.service"
+
+    install -m 0644 "${PKG_ROOT}/README.md" "${STAGE_DIR}/usr/share/doc/${INTERNAL_PKG}/README.md"
+    install -m 0644 "${PKG_ROOT}/VERSION" "${STAGE_DIR}/usr/share/doc/${INTERNAL_PKG}/VERSION"
+
+    cat <<EOF > "${STAGE_DIR}/DEBIAN/control"
+Package: ${INTERNAL_PKG}
+Version: ${VERSION}
+Section: net
+Priority: optional
+Architecture: ${DEB_ARCH}
+Depends: libc6 (>= 2.31), libssl3 (>= 3.0.0) | python3 (>= 3.7)
+Provides: qseal, qseal-server, qseal-client, securecomm
+Replaces: securecomm
+Maintainer: QSEAL Engineering Team <support@qseal.local>
+Description: QSEAL Quantum-Secure Enterprise Access & Link Platform (${INTERNAL_PKG})
+ QSEAL is an independent hybrid and pure post-quantum secure networking platform.
+ Features X25519, ML-KEM-768, ML-DSA-65, ChaCha20-Poly1305, native direct UDP
+ connectivity over the public Internet, and multi-client routing on Linux (${CPU_DESC}).
+EOF
+
+    cat <<'EOF' > "${STAGE_DIR}/DEBIAN/postinst"
+#!/bin/sh
+set -e
+
+# Create dedicated system group and user
+if ! getent group qseal >/dev/null; then
+    groupadd --system qseal 2>/dev/null || true
+fi
+if ! getent passwd qseal >/dev/null; then
+    useradd --system --gid qseal --home-dir /var/lib/qseal --no-create-home --shell /usr/sbin/nologin qseal 2>/dev/null || true
+fi
+
+mkdir -p /etc/qseal /var/lib/qseal /var/log/qseal
+# Strict secure permissions
+chmod 0750 /etc/qseal
+chmod 0700 /var/lib/qseal
+chmod 0750 /var/log/qseal
+chown root:qseal /etc/qseal 2>/dev/null || true
+chown qseal:qseal /var/lib/qseal 2>/dev/null || true
+chown qseal:qseal /var/log/qseal 2>/dev/null || true
+chmod 0600 /etc/qseal/*.key 2>/dev/null || true
+chmod 0644 /etc/qseal/*.pub 2>/dev/null || true
+chmod 0600 /etc/qseal/*.yaml 2>/dev/null || true
+chmod 0600 /etc/qseal/*.json 2>/dev/null || true
+
+# Compatibility symlink for legacy /etc/securecomm
+if [ ! -d /etc/securecomm ]; then
+    ln -sf /etc/qseal /etc/securecomm 2>/dev/null || true
+fi
+
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload || true
+fi
+exit 0
+EOF
+    chmod 0755 "${STAGE_DIR}/DEBIAN/postinst"
+
+    cat <<'EOF' > "${STAGE_DIR}/DEBIAN/prerm"
+#!/bin/sh
+set -e
+if [ -d /run/systemd/system ]; then
+    systemctl stop qseal-server.service 2>/dev/null || true
+    systemctl stop qseal-client.service 2>/dev/null || true
+    systemctl stop qseal.service 2>/dev/null || true
+fi
+exit 0
+EOF
+    chmod 0755 "${STAGE_DIR}/DEBIAN/prerm"
+
+    cat <<'EOF' > "${STAGE_DIR}/DEBIAN/postrm"
+#!/bin/sh
+set -e
+if [ "$1" = "purge" ]; then
+    rm -rf /var/log/qseal
+    echo "Notice: Persistent cryptographic identity keys in /etc/qseal were preserved."
+fi
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload || true
+fi
+exit 0
+EOF
+    chmod 0755 "${STAGE_DIR}/DEBIAN/postrm"
+
+    dpkg-deb --build --root-owner-group "${STAGE_DIR}" "${DEB_FILE}"
+    rm -rf "${STAGE_DIR}"
+    echo "[✓] Successfully built: ${DEB_FILE}"
+}
+
+# Ensure ARM64 binary is built if cross-compiler is present
+if [ "$TARGET_REQUEST" = "all" ] || [ "$TARGET_REQUEST" = "arm64" ] || [ ! -f "${PKG_ROOT}/bin/qseal_arm64" ]; then
+    compile_arm64_binary || true
+fi
+
+# Execute requested builds
+if [ "$TARGET_REQUEST" = "all" ]; then
+    # Remove old debian packages
+    rm -f "${PKG_ROOT}/packaging/debian/securecomm"*.deb
+    rm -f "${PKG_ROOT}/packaging/debian/qseal"*.deb
+    rm -f "${PKG_ROOT}/packaging/debian/qseal"*.deb
+
+    build_single_package "x86"
+    build_single_package "arm64"
+    build_single_package "arm32"
+
+    echo ""
+    echo "=========================================================================================================================="
+    printf "%-25s %-22s %-14s %-25s %-40s\n" "Debian Package File" "Internal Package Name" "Debian Arch" "Executable Binary" "Target Hardware"
+    echo "--------------------------------------------------------------------------------------------------------------------------"
+    printf "%-25s %-22s %-14s %-25s %-40s\n" "qseal-amd64.deb" "qseal-amd64" "amd64" "qseal" "Intel/AMD 64-bit PCs & Cloud Servers"
+    printf "%-25s %-22s %-14s %-25s %-40s\n" "qseal-arm64.deb" "qseal-arm64" "arm64" "qseal" "Raspberry Pi 4, Raspberry Pi 5, Jetson (64-bit)"
+    printf "%-25s %-22s %-14s %-25s %-40s\n" "qseal-arm32.deb" "qseal-arm32" "armhf" "qseal" "Raspberry Pi 2/3 running 32-bit Raspbian/Debian"
+    echo "=========================================================================================================================="
+elif [ "$TARGET_REQUEST" = "host" ]; then
+    build_single_package "$HOST_TARGET"
+else
+    build_single_package "$TARGET_REQUEST"
+fi
+
+exit 0

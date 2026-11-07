@@ -1,5 +1,5 @@
 ================================================================================
-  QRYPTONEX — HYBRID CRYPTOGRAPHIC SUITE SPECIFICATION & WIRE FORMAT
+  QSEAL — HYBRID CRYPTOGRAPHIC SUITE SPECIFICATION & WIRE FORMAT
   (X25519 + ML-KEM-768 + Ed25519 + ML-DSA-65 + ChaCha20-Poly1305)
 ================================================================================
 Document Type   : Technical Cryptographic Architecture & Wire Protocol Specification
@@ -7,7 +7,7 @@ Standard Bases  : RFC 7748 (X25519), FIPS 203 (ML-KEM-768 / Kyber-768),
                   RFC 8032 (Ed25519), FIPS 204 (ML-DSA-65 / Dilithium-3),
                   RFC 8439 (ChaCha20-Poly1305), FIPS 180-4 (SHA-384),
                   RFC 5869 (HKDF), NIST SP 800-56C, RFC 6479 (Replay Window)
-Target Codebase : QRYPTONEX Hybrid Suite (C11 Systems Framework)
+Target Codebase : QSEAL Hybrid Suite (C11 Systems Framework)
 Author          : Senior Cryptographic Systems Engineering Team
 ================================================================================
 
@@ -31,7 +31,7 @@ TABLE OF CONTENTS:
 ================================================================================
 
 1.1 High-Level Purpose
-The QRYPTONEX Hybrid Suite implements a dual-layer cryptographic defense
+The QSEAL Hybrid Suite implements a dual-layer cryptographic defense
 designed to provide Post-Quantum Forward Secrecy and Post-Quantum Authenticity
 while preserving the battle-tested classical security guarantees of Curve25519.
 
@@ -159,13 +159,13 @@ Independent directional keys are derived from Master_Secret:
 
   Client_Write_Key (32B) = HKDF-Expand(
       PRK  = Master_Secret,
-      info = "QRYPTONEX-HYBRID-c2s" || session_id (8 bytes),
+      info = "QSEAL-HYBRID-c2s" || session_id (8 bytes),
       L    = 32 bytes
   )
 
   Server_Write_Key (32B) = HKDF-Expand(
       PRK  = Master_Secret,
-      info = "QRYPTONEX-HYBRID-s2c" || session_id (8 bytes),
+      info = "QSEAL-HYBRID-s2c" || session_id (8 bytes),
       L    = 32 bytes
   )
 

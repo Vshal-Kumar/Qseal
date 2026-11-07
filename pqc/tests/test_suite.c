@@ -104,7 +104,7 @@ static int test_dsa_signing_and_tampering(void) {
     uint8_t sig[DSA_SIG_BYTES];
     size_t sig_len = 0;
 
-    const uint8_t msg[] = "NEXQOR-TEST-TRANSCRIPT-DIGEST-DATA-STRING";
+    const uint8_t msg[] = "QSEAL-TEST-TRANSCRIPT-DIGEST-DATA-STRING";
     size_t msg_len = sizeof(msg) - 1;
 
     TEST_ASSERT(dsa_keypair(pk, sk) == 0, "dsa_keypair failed");
@@ -451,7 +451,7 @@ static int test_session_isolation_and_cleanup(void) {
 int main(void) {
     printf("\n");
     printf(CLR_CYAN "╔══════════════════════════════════════════════════════════════╗" CLR_RESET "\n");
-    printf(CLR_CYAN "║       NEXQOR — Post-Quantum Security & Cryptographic Tests   ║" CLR_RESET "\n");
+    printf(CLR_CYAN "║       QSEAL — Post-Quantum Security & Cryptographic Tests   ║" CLR_RESET "\n");
     printf(CLR_CYAN "╚══════════════════════════════════════════════════════════════╝" CLR_RESET "\n\n");
 
     RUN_TEST(test_kem_agreement_and_negative);

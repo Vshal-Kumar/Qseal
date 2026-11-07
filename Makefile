@@ -67,7 +67,6 @@ endif
         hybrid-arm64 hybrid-arm32 hybrid-x86_64 \
         pqc-arm64 pqc-arm32 pqc-x86_64 \
         bench bench_pqc benchpqc \
-        attack-ui run-attack-ui \
         package package-all package-x86 package-arm64 package-arm32 \
         detect info help banner
 
@@ -89,14 +88,14 @@ banner:
 
 # ── QSEAL Core Platform Production Engine ───────────────────────────
 qseal:
-	@echo "==> Building QSEAL Production Engine [securecomm]..."
-	$(MAKE) -C securecomm all
+	@echo "==> Building QSEAL Production Engine [qseal]..."
+	$(MAKE) -C qseal all
 
 qseal-server: qseal
-	./securecomm/bin/qseal server start
+	./qseal/bin/qseal server start
 
 qseal-client: qseal
-	./securecomm/bin/qseal client connect
+	./qseal/bin/qseal client connect
 
 # ── Dynamic Multi-Suite Build Targets ────────────────────────────────
 hybrid:
@@ -153,7 +152,7 @@ test: test-qseal test-hybrid test-pqc test-security-lab
 	@echo "╚══════════════════════════════════════════════════════════════════════════════════╝"
 
 test-qseal:
-	$(MAKE) -C securecomm test
+	$(MAKE) -C qseal test
 
 test-hybrid:
 	$(MAKE) -C hybrid test
@@ -167,7 +166,7 @@ test-security-lab:
 # ── Clean Targets (Device-Aware & Multi-Arch) ────────────────────────
 clean:
 	@echo "==> Cleaning build artifacts for active target [$(TARGET_DESC)]..."
-	$(MAKE) -C securecomm clean
+	$(MAKE) -C qseal clean
 	$(MAKE) -C hybrid -f $(TARGET_MAKEFILE) clean
 	$(MAKE) -C pqc -f $(TARGET_MAKEFILE) clean
 	$(MAKE) -C security_lab clean 2>/dev/null || true
@@ -175,52 +174,44 @@ clean:
 
 clean-arm64:
 	@echo "==> Cleaning ARM64 artifacts across all suites..."
-	$(MAKE) -C securecomm clean
+	$(MAKE) -C qseal clean
 	$(MAKE) -C hybrid -f Makefile.arm64 clean
 	$(MAKE) -C pqc -f Makefile.arm64 clean
 
 clean-arm32:
 	@echo "==> Cleaning ARM32 artifacts across all suites..."
-	$(MAKE) -C securecomm clean
+	$(MAKE) -C qseal clean
 	$(MAKE) -C hybrid -f Makefile.arm32 clean
 	$(MAKE) -C pqc -f Makefile.arm32 clean
 
 clean-x86_64:
 	@echo "==> Cleaning x86_64 artifacts across all suites..."
-	$(MAKE) -C securecomm clean
+	$(MAKE) -C qseal clean
 	$(MAKE) -C hybrid -f Makefile clean
 	$(MAKE) -C pqc -f Makefile clean
 	rm -f bench_pqc benchpqc /tmp/pqc_bench_*.json
 
 clean-all:
 	@echo "==> Deep cleaning all suites across all architectures (x86_64, arm64, arm32)..."
-	$(MAKE) -C securecomm clean
+	$(MAKE) -C qseal clean
 	$(MAKE) -C hybrid clean-all
 	$(MAKE) -C pqc clean-all
 	rm -f bench_pqc benchpqc /tmp/pqc_bench_*.json
 	$(MAKE) -C security_lab clean 2>/dev/null || true
 	@echo "All build artifacts, objects, libraries, and binaries removed."
 
-# ── GTK 4 Security & Attack Lab UI ──────────────────────────────────
-attack-ui:
-	@echo "==> Building GTK 4 Security & Attack Lab UI..."
-	$(MAKE) -C security_lab/ui all
-
-run-attack-ui: attack-ui
-	./security_lab/ui/attack_ui
-
 # ── Multi-Architecture Debian Packaging ──────────────────────────────
 package package-all:
-	$(MAKE) -C securecomm package
+	$(MAKE) -C qseal package
 
 package-x86:
-	$(MAKE) -C securecomm package-x86
+	$(MAKE) -C qseal package-x86
 
 package-arm64:
-	$(MAKE) -C securecomm package-arm64
+	$(MAKE) -C qseal package-arm64
 
 package-arm32:
-	$(MAKE) -C securecomm package-arm32
+	$(MAKE) -C qseal package-arm32
 
 # ── Information & Help ───────────────────────────────────────────────
 detect info: banner
@@ -257,14 +248,10 @@ help:
 	@echo ""
 	@echo "Benchmarking Targets:"
 	@echo "  make bench          - Run unified comparative benchmark runner (bench_pqc)"
-	@echo "  ./securecomm/bin/qseal benchmark --mode hybrid - Benchmark hybrid cryptography"
-	@echo "  ./securecomm/bin/qseal benchmark --mode pqc    - Benchmark pure PQC cryptography"
+	@echo "  ./qseal/bin/qseal benchmark --mode hybrid - Benchmark hybrid cryptography"
+	@echo "  ./qseal/bin/qseal benchmark --mode pqc    - Benchmark pure PQC cryptography"
 	@echo ""
-	@echo "Optional GTK 4 Security Testing Targets:"
-	@echo "  make attack-ui      - Build pure C GTK 4 security & attack evaluation UI"
-	@echo "  make run-attack-ui  - Run pure C GTK 4 security & attack evaluation UI"
-	@echo ""
-	@echo "Debian Packaging Targets (securecomm/packaging/debian/):"
+	@echo "Debian Packaging Targets (qseal/packaging/debian/):"
 	@echo "  make package        - Build all 3 Debian packages (amd64, arm64, arm32)"
 	@echo "  make package-x86    - Build qseal-amd64.deb (amd64)"
 	@echo "  make package-arm64  - Build qseal-arm64.deb (arm64)"

@@ -1,7 +1,7 @@
 /*
  * security_lab/src/main.c
  *
- * Main entry point for the QRYPTONEX pure-C security lab executable.
+ * Main entry point for the QSEAL pure-C security lab executable.
  */
 
 #include "test_engine.h"

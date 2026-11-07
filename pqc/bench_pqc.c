@@ -291,7 +291,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  perf_ui_print_section_header("QRYPTONEX PQC SUITE: N-RUN BENCHMARK (ML-KEM-768 + ML-DSA-65)");
+  perf_ui_print_section_header("QSEAL PQC SUITE: N-RUN BENCHMARK (ML-KEM-768 + ML-DSA-65)");
   printf("  Benchmark Setup: %d cryptographic rounds per run across %d runs\n", rounds, runs);
   if (session.temp.available) {
     printf("  Hardware Sensor: %s (%s) — Initial Temp: %.2f °C\n",
@@ -581,7 +581,7 @@ int main(int argc, char *argv[]) {
     {"8. AEAD Symmetric Decryption (1KB)", stat_aead_dec.mean, stat_aead_dec.p95, stat_aead_dec.throughput_ops_sec, 1024, "pt"},
     {"9. Full 4-Way Handshake Simulation", stat_hs.mean, stat_hs.p95, stat_hs.throughput_ops_sec, 12834, "net"}
   };
-  perf_ui_print_unified_comparison_table("QRYPTONEX Pure Post-Quantum Suite (ML-KEM-768 + ML-DSA-65)", comparison_ops, 9);
+  perf_ui_print_unified_comparison_table("QSEAL Pure Post-Quantum Suite (ML-KEM-768 + ML-DSA-65)", comparison_ops, 9);
 
   if (export_path) {
     perf_export_json(export_path, "Pure Post-Quantum Suite (ML-KEM-768 + ML-DSA-65)",

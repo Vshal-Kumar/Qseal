@@ -1,0 +1,45 @@
+# QSEAL Server Configuration File (Template)
+# Quantum-Secure Enterprise Access & Link Networking Platform
+# Place at /etc/qseal/server.yaml
+
+server:
+  id: "srv-prod-1"
+  name: "QSEAL Production Gateway"
+  identity_path: "/var/lib/qseal/identity.key"
+
+network:
+  bind_address: "0.0.0.0"
+  advertised_public_ipv4: ""
+  advertised_public_ipv6: ""
+  port: 9877
+  transport: "udp"
+  hostname: ""
+
+security:
+  allowed_profiles: "hybrid,pqc"
+  preferred_profile: "hybrid"
+  require_client_auth: true
+  allow_tofu: true
+  key_path: "/var/lib/qseal/identity.key"
+  public_key_path: "/var/lib/qseal/identity.pub"
+  trust_store_path: "/var/lib/qseal/trust_store.txt"
+  session_expiration_sec: 3600
+  rekey_interval_sec: 1800
+
+connections:
+  max_clients: 64
+  handshake_timeout_ms: 5000
+  connection_timeout_ms: 10000
+  heartbeat_interval_sec: 15
+  inactive_session_timeout_sec: 60
+  allow_client_to_client: true
+
+client_access:
+  enrollment_policy: "tofu"
+  allowed_clients: "*"
+
+logging:
+  level: "info"
+  file: "/var/log/qseal/server.log"
+  retention_days: 7
+

@@ -144,7 +144,7 @@ static void render_client_menu(int current_target)
 
     printf(CLR_CYAN
            "╔════════════════════════════════════════════════════════════════════╗\n"
-           "║         QRYPTONEX Hybrid Chat  ─  SENDER TERMINAL                  ║\n"
+           "║         QSEAL Hybrid Chat  ─  SENDER TERMINAL                  ║\n"
            "║ Suite: X25519 + ML-KEM-768 + Ed25519 + ML-DSA-65 + ChaCha20        ║\n"
            "╚════════════════════════════════════════════════════════════════════╝\n"
            CLR_RESET "\n");
@@ -287,7 +287,7 @@ int main(void)
     printf("\033[2J\033[H");
     printf(CLR_MAGENTA
            "╔════════════════════════════════════════════════════════════════════╗\n"
-           "║         QRYPTONEX Hybrid Chat  ─  SENDER TERMINAL                  ║\n"
+           "║         QSEAL Hybrid Chat  ─  SENDER TERMINAL                  ║\n"
            "║ Suite: X25519 + ML-KEM-768 + Ed25519 + ML-DSA-65 + ChaCha20        ║\n"
            "╚════════════════════════════════════════════════════════════════════╝\n"
            CLR_RESET "\n");

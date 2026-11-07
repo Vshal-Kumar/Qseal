@@ -248,7 +248,7 @@ int main(int argc, char *argv[])
 
     printf("\033[1;36m");
     printf("╔════════════════════════════════════════════════════════════════════╗\n");
-    printf("║      QRYPTONEX Hybrid Chat Client (Suite v1.0)                     ║\n");
+    printf("║      QSEAL Hybrid Chat Client (Suite v1.0)                     ║\n");
     printf("║   Suite: X25519 + ML-KEM-768 + Ed25519 + ML-DSA-65 + ChaCha20      ║\n");
     printf("╚════════════════════════════════════════════════════════════════════╝\n");
     printf(CLR_RESET "\n");

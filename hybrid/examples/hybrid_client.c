@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
     if (argc > 2) port = atoi(argv[2]);
 
     printf("\n╔════════════════════════════════════════════════════════════════╗\n");
-    printf("║      QRYPTONEX Hybrid Cryptographic Client (Suite v1.0)        ║\n");
+    printf("║      QSEAL Hybrid Cryptographic Client (Suite v1.0)        ║\n");
     printf("║   Suite: X25519 + ML-KEM-768 + Ed25519 + ML-DSA-65 + ChaCha20  ║\n");
     printf("╚════════════════════════════════════════════════════════════════╝\n\n");
 

@@ -2,7 +2,7 @@
  * client_broadcast.c — Continuous IoT Sensor Telemetry Broadcast Client
  *
  * Designed for embedded IoT nodes (ESP32, Raspberry Pi, ARM64/ARM32, x86_64)
- * communicating with NEXQOR / QRYPTONEX Post-Quantum Server Core.
+ * communicating with QSEAL / QSEAL Post-Quantum Server Core.
  *
  * Features:
  *   1. Establishes post-quantum secure session via 4-way handshake (ML-KEM-768 + ML-DSA-65).
@@ -408,7 +408,7 @@ int main(int argc, char *argv[]) {
   }
 
   printf("\n\033[1;36m╔══════════════════════════════════════════════════════════════════════════╗\033[0m\n");
-  printf("\033[1;36m║     QRYPTONEX — Post-Quantum IoT Telemetry Broadcaster (NEXQOR)          ║\033[0m\n");
+  printf("\033[1;36m║     QSEAL — Post-Quantum IoT Telemetry Broadcaster (QSEAL)          ║\033[0m\n");
   printf("\033[1;36m╚══════════════════════════════════════════════════════════════════════════╝\033[0m\n");
   printf("  \033[1;33m• Server Target   :\033[0m %s:%d\n", server_ip, SERVER_PORT);
   printf("  \033[1;33m• Network Link    :\033[0m %s\n", net_type);
