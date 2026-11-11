@@ -105,8 +105,8 @@ build_single_package() {
     case "$TARGET_ID" in
         x86|x86amd|amd64|x86_64)
             DEB_ARCH="amd64"
-            FILE_NAME="qseal-amd64.deb"
-            INTERNAL_PKG="qseal-amd64"
+            FILE_NAME="qseal-x86.deb"
+            INTERNAL_PKG="qseal-x86"
             CPU_DESC="x86-64 (Intel/AMD 64-bit)"
             ;;
         arm64|aarch64)
@@ -155,7 +155,7 @@ build_single_package() {
     fi
 
     # Select appropriate binary for this architecture
-    if [ "$INTERNAL_PKG" = "qseal-amd64" ]; then
+    if [ "$INTERNAL_PKG" = "qseal-x86" ] || [ "$INTERNAL_PKG" = "qseal-amd64" ]; then
         install -m 0755 "${BIN_SRC}" "${STAGE_DIR}/usr/bin/qseal"
     elif [ "$INTERNAL_PKG" = "qseal-arm64" ]; then
         if [ -f "${PKG_ROOT}/bin/qseal_arm64" ]; then
@@ -527,6 +527,7 @@ if [ "$TARGET_REQUEST" = "all" ]; then
     rm -f "${PKG_ROOT}/packaging/debian/qseal"*.deb
 
     build_single_package "x86"
+    ln -sf qseal-x86.deb "${PKG_ROOT}/packaging/debian/qseal-amd64.deb"
     build_single_package "arm64"
     build_single_package "arm32"
 
@@ -534,7 +535,7 @@ if [ "$TARGET_REQUEST" = "all" ]; then
     echo "=========================================================================================================================="
     printf "%-25s %-22s %-14s %-25s %-40s\n" "Debian Package File" "Internal Package Name" "Debian Arch" "Executable Binary" "Target Hardware"
     echo "--------------------------------------------------------------------------------------------------------------------------"
-    printf "%-25s %-22s %-14s %-25s %-40s\n" "qseal-amd64.deb" "qseal-amd64" "amd64" "qseal" "Intel/AMD 64-bit PCs & Cloud Servers"
+    printf "%-25s %-22s %-14s %-25s %-40s\n" "qseal-x86.deb" "qseal-x86" "amd64" "qseal" "Intel/AMD 64-bit PCs & Cloud Servers"
     printf "%-25s %-22s %-14s %-25s %-40s\n" "qseal-arm64.deb" "qseal-arm64" "arm64" "qseal" "Raspberry Pi 4, Raspberry Pi 5, Jetson (64-bit)"
     printf "%-25s %-22s %-14s %-25s %-40s\n" "qseal-arm32.deb" "qseal-arm32" "armhf" "qseal" "Raspberry Pi 2/3 running 32-bit Raspbian/Debian"
     echo "=========================================================================================================================="

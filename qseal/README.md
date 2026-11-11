@@ -56,7 +56,7 @@ Standard Default Port: **UDP `9877`** | Default Server Bind: **`0.0.0.0:9877`**
 
 #### Step 1: Install the Debian Package
 ```bash
-sudo dpkg -i qseal-amd64.deb || sudo apt-get install -f -y
+sudo dpkg -i qseal-x86.deb || sudo apt-get install -f -y
 ```
 
 #### Step 2: Run the Terminal Setup Wizard
@@ -100,7 +100,7 @@ qseal server start
 #### Step 1: Install the Debian Package
 ```bash
 # On an x86_64 Laptop / VM:
-sudo dpkg -i qseal-amd64.deb || sudo apt-get install -f -y
+sudo dpkg -i qseal-x86.deb || sudo apt-get install -f -y
 
 # On a Raspberry Pi 4 / 5 (ARM64):
 sudo dpkg -i qseal-arm64.deb || sudo apt-get install -f -y
@@ -477,7 +477,7 @@ The server authenticates the sender, decrypts the inbound frame, re-encrypts the
 
 | Package File | Target Architecture | Target Hardware | Direct Terminal Install Command |
 | :--- | :---: | :--- | :--- |
-| **`qseal-amd64.deb`** | `amd64` | Intel / AMD 64-bit servers, desktops, cloud VMs | `sudo dpkg -i qseal-amd64.deb` |
+| **`qseal-x86.deb`** | `amd64` | Intel / AMD 64-bit servers, desktops, cloud VMs | `sudo dpkg -i qseal-x86.deb` |
 | **`qseal-arm64.deb`** | `arm64` | Raspberry Pi 4 / 5, NVIDIA Jetson, ARM64 servers | `sudo dpkg -i qseal-arm64.deb` |
 | **`qseal-arm32.deb`** | `armhf` | Raspberry Pi 2 / 3 running 32-bit Raspbian/Debian | `sudo dpkg -i qseal-arm32.deb` |
 

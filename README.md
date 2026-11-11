@@ -380,7 +380,7 @@ make package
 ```
 
 Generated packages in `qseal/packaging/debian/`:
-- `qseal-amd64.deb`: 64-bit x86 servers, desktops, cloud VMs.
+- `qseal-x86.deb`: 64-bit x86 servers, desktops, cloud VMs.
 - `qseal-arm64.deb`: Raspberry Pi 4/5, NVIDIA Jetson, AWS Graviton.
 - `qseal-arm32.deb`: Raspberry Pi 2/3 running 32-bit Raspbian (`armhf`).
 
@@ -388,7 +388,7 @@ Generated packages in `qseal/packaging/debian/`:
 
 ```bash
 # Install package:
-sudo dpkg -i qseal/packaging/debian/qseal-amd64.deb
+sudo dpkg -i qseal/packaging/debian/qseal-x86.deb
 
 # Package post-installation automatically sets strict permissions:
 # - /etc/qseal      -> 0700 (Owner: root)

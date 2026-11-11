@@ -1,0 +1,118 @@
+================================================================================
+QSEAL: QUICKSTART SETUP & OPERATIONS GUIDE
+Quantum-Secure Enterprise Access & Link
+================================================================================
+
+This guide provides step-by-step instructions to set up and verify QSEAL
+between two Linux devices (Server and Client) over the same local network, Wi-Fi,
+or direct public WAN.
+
+Default Communication Protocol: UDP
+Default Network Port: 9877
+
+--------------------------------------------------------------------------------
+PART 1: SERVER MACHINE SETUP
+--------------------------------------------------------------------------------
+
+1. Install the Debian Package:
+   sudo dpkg -i qseal-x86.deb || sudo apt-get install -f -y
+
+   (Or if building from source):
+   cd qseal
+   make
+   sudo make install
+
+2. Allow UDP Port 9877 Through Firewall:
+   sudo ufw allow 9877/udp
+
+3. Initialize Server Identity & Configuration:
+
+   [Option A - Interactive Setup Wizard (Recommended)]:
+   qseal setup
+     • Select Role: 1 (Server)
+     • Select Mode: 1 (Hybrid) or 2 (Pure PQC)
+     • Bind Address: 0.0.0.0
+     • Port: 9877
+     • Device ID: [e.g., srv-node-01]
+
+   [Option B - One-Line Unattended Setup]:
+   qseal server init --bind 0.0.0.0 --port 9877 --mode hybrid --device-id srv-node-01
+
+4. Identify the Server's IP Address:
+   ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v '127.0.0.1'
+
+   (Note down this IP address, e.g., 192.168.1.50 or your public IP).
+
+5. Start the Server Daemon:
+   qseal server start
+
+   (The server is now actively listening for incoming quantum-safe connections).
+
+   To run as a persistent systemd service instead:
+   sudo systemctl enable --now qseal-server
+   sudo systemctl status qseal-server
+
+--------------------------------------------------------------------------------
+PART 2: CLIENT MACHINE SETUP
+--------------------------------------------------------------------------------
+
+1. Install the Debian Package on the Second Device:
+   # For x86_64 PC / Laptop:
+   sudo dpkg -i qseal-x86.deb || sudo apt-get install -f -y
+
+   # For Raspberry Pi 4/5 (ARM64):
+   sudo dpkg -i qseal-arm64.deb || sudo apt-get install -f -y
+
+2. Initialize Client Identity:
+
+   [Option A - Interactive Setup Wizard]:
+   qseal setup
+     • Select Role: 2 (Client)
+     • Select Mode: 1 (Hybrid)
+     • Target Server IP: [Enter Server IP from Part 1, e.g., 192.168.1.50]
+     • Target Port: 9877
+     • Device ID: [e.g., cli-node-01]
+
+   [Option B - One-Line Setup]:
+   qseal client init --server 192.168.1.50 --port 9877 --mode hybrid --device-id cli-node-01
+
+3. Connect to the Server:
+
+   [Interactive Real-Time Encrypted Shell]:
+   qseal client connect 192.168.1.50 9877
+
+   (Or simply 'qseal client connect' if configured during setup)
+
+   Once connected, an encrypted terminal shell will open:
+     qseal> Hello from Client!
+     [YOU → SERVER] Hello from Client! (Encrypted)
+     [SERVER → YOU] Welcome cli-node-01. Session verified.
+
+   Interactive commands inside the shell:
+     /status   - Display session ID, negotiated profile, and cipher status
+     /metrics  - Display packet statistics and round-trip latency
+     /ping     - Send an authenticated keepalive datagram
+     /to <id>  - Send routed message to another connected client
+     /quit     - Disconnect cleanly and zeroize session keys
+
+   [Single Automated Message / Scripted Transmission]:
+   qseal client connect 192.168.1.50 9877 --msg "AUTOMATED_TELEMETRY: OK"
+
+--------------------------------------------------------------------------------
+PART 3: VERIFICATION & DIAGNOSTICS
+--------------------------------------------------------------------------------
+
+1. Hardware & Network Diagnostics:
+   qseal diagnostics
+
+2. Cryptographic Microbenchmarks:
+   qseal benchmark --mode hybrid
+   qseal benchmark --mode pqc
+
+3. Inspect Configuration & Peer Trust:
+   qseal config show
+
+4. View Active Connected Clients (on server):
+   qseal server clients
+
+================================================================================
